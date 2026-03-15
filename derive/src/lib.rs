@@ -3,9 +3,13 @@
 //! Macros for [ratatui-input-manager](https://crates.io/crates/ratatui-input-manager)
 
 use darling::FromAttributes;
+use itertools::MultiUnzip;
 use proc_macro2::TokenStream;
-use quote::ToTokens;
-use syn::{ImplItem, ItemImpl, parse_macro_input, parse2, spanned::Spanned};
+use quote::{ToTokens, quote};
+use syn::{
+    Expr, ExprLit, ImplItem, ItemImpl, Lit, Meta, MetaNameValue, parse_macro_input, parse2,
+    spanned::Spanned,
+};
 
 #[derive(FromAttributes)]
 #[darling(attributes(keybind), forward_attrs)]
@@ -41,12 +45,26 @@ fn keymap_impl(input: ItemImpl) -> syn::Result<(ItemImpl, ItemImpl)> {
         .map(|item| match item {
             ImplItem::Fn(mut item_fn) => {
                 let KeybindArgs { pressed, attrs } = KeybindArgs::from_attributes(&item_fn.attrs)?;
+                let doc = attrs.iter().find_map(|attr| {
+                    if let Meta::NameValue(MetaNameValue { path, value, .. }) = &attr.meta
+                        && path.is_ident("doc")
+                    {
+                        match value {
+                            Expr::Lit(ExprLit {
+                                lit: Lit::Str(doc), ..
+                            }) => Some(doc.value().trim().to_string()),
+                            _ => None,
+                        }
+                    } else {
+                        None
+                    }
+                });
                 item_fn.attrs = attrs;
-                Ok(((item_fn.sig.ident.clone(), pressed), item_fn))
+                Ok(((item_fn.sig.ident.clone(), pressed, doc), item_fn))
             }
             _ => Err(syn::Error::new(
                 item.span(),
-                "Only function definitions are permitted with a keymap".to_string(),
+                "Only function definitions are permitted with a keymap",
             )),
         })
         .collect::<Result<(Vec<_>, Vec<_>), _>>()?;
@@ -58,13 +76,30 @@ fn keymap_impl(input: ItemImpl) -> syn::Result<(ItemImpl, ItemImpl)> {
     })
     .unwrap();
 
-    let (fn_names, key_codes): (Vec<_>, Vec<_>) = keybinds
+    let (fn_names, key_codes, descriptions): (Vec<_>, Vec<_>, Vec<_>) = keybinds
         .into_iter()
-        .flat_map(|(fn_name, pressed)| pressed.into_iter().map(move |key| (fn_name.clone(), key)))
-        .unzip();
+        .flat_map(|(fn_name, pressed, description)| {
+            let description = match description {
+                Some(description) => quote! {Some(#description)},
+                None => quote! {None},
+            };
+            pressed
+                .into_iter()
+                .map(move |key| (fn_name.clone(), key, description.clone()))
+        })
+        .multiunzip();
 
     let keymap_impl = parse2(quote::quote! {
         impl ::ratatui_input_manager::KeyMap for #self_ty {
+            const KEYBINDS: &'static [::ratatui_input_manager::KeyBind] = &[
+                #(
+                    ::ratatui_input_manager::KeyBind {
+                        key: ::crossterm::event::#key_codes,
+                        description: #descriptions,
+                    },
+                )*
+            ];
+
             fn handle(&mut self, event: &::crossterm::event::Event) {
                 match event {
                     #(
@@ -89,6 +124,7 @@ fn keymap_impl(input: ItemImpl) -> syn::Result<(ItemImpl, ItemImpl)> {
 #[cfg(test)]
 mod tests {
     use crate::keymap_impl;
+    use pretty_assertions::assert_eq;
     use prettyplease::unparse;
     use quote::quote;
     use syn::{Item, ItemImpl, parse2};
@@ -115,6 +151,7 @@ mod tests {
                     todo!()
                 }
 
+                /// The second keybind
                 #[keybind(pressed=KeyCode::Char('a'))]
                 fn baz(&mut self) {
                     todo!()
@@ -129,6 +166,7 @@ mod tests {
                     todo!()
                 }
 
+                /// The second keybind
                 fn baz(&mut self) {
                     todo!()
                 }
@@ -137,6 +175,21 @@ mod tests {
         .unwrap();
         let expected_keymap = parse2::<ItemImpl>(quote! {
             impl ::ratatui_input_manager::KeyMap for Foo {
+                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind] = &[
+                    ::ratatui_input_manager::KeyBind {
+                        key: ::crossterm::event::KeyCode::Esc,
+                        description: None,
+                    },
+                    ::ratatui_input_manager::KeyBind {
+                        key: ::crossterm::event::KeyCode::Char('q'),
+                        description: None,
+                    },
+                    ::ratatui_input_manager::KeyBind {
+                        key: ::crossterm::event::KeyCode::Char('a'),
+                        description: Some("The second keybind"),
+                    }
+                ];
+
                 fn handle(&mut self, event: &::crossterm::event::Event) {
                     match event {
                         ::crossterm::event::Event::Key(
@@ -167,7 +220,7 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(format_item(orig_impl), format_item(expected_orig));
-        assert_eq!(format_item(keymap_impl), format_item(expected_keymap));
+        assert_eq!(format_item(expected_orig), format_item(orig_impl));
+        assert_eq!(format_item(expected_keymap), format_item(keymap_impl));
     }
 }
