@@ -1,0 +1,15 @@
+[package]
+name = "ratatui-input-manager"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+crossterm = { workspace = true }
+ratatui-input-manager-derive = { path = "derive" }
+
+[workspace]
+members = [".", "derive"]
+default-members = [".", "derive"]
+
+[workspace.dependencies]
+crossterm = "0.29.0"
