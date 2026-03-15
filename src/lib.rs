@@ -2,6 +2,10 @@
 #![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
 
+/// Ratatui widgets displaying keybinds
+#[cfg(feature = "widgets")]
+pub mod widgets;
+
 use crossterm::event::{Event, KeyCode};
 pub use ratatui_input_manager_derive::keymap;
 
