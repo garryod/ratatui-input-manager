@@ -397,6 +397,7 @@ name = "ratatui-input-manager"
 version = "0.1.0"
 dependencies = [
  "crossterm",
+ "itertools",
  "ratatui-core",
  "ratatui-input-manager-derive",
  "ratatui-widgets",
