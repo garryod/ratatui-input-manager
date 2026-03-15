@@ -9,10 +9,10 @@ pub mod widgets;
 use crossterm::event::{Event, KeyCode};
 pub use ratatui_input_manager_derive::keymap;
 
-/// Key binding metadata, including the handlded key press and a description of behaviour
+/// Key binding metadata, including the handlded key presses and a description of behaviour
 pub struct KeyBind {
-    /// The key which is handled by this binding
-    pub key: KeyCode,
+    /// The keys which is handled by this binding
+    pub keys: &'static [KeyCode],
     /// A brief description of the expected behaviour
     pub description: Option<&'static str>,
 }

@@ -78,14 +78,12 @@ fn keymap_impl(input: ItemImpl) -> syn::Result<(ItemImpl, ItemImpl)> {
 
     let (fn_names, key_codes, descriptions): (Vec<_>, Vec<_>, Vec<_>) = keybinds
         .into_iter()
-        .flat_map(|(fn_name, pressed, description)| {
+        .map(|(fn_name, pressed, description)| {
             let description = match description {
                 Some(description) => quote! {Some(#description)},
                 None => quote! {None},
             };
-            pressed
-                .into_iter()
-                .map(move |key| (fn_name.clone(), key, description.clone()))
+            (fn_name, pressed, description)
         })
         .multiunzip();
 
@@ -94,7 +92,7 @@ fn keymap_impl(input: ItemImpl) -> syn::Result<(ItemImpl, ItemImpl)> {
             const KEYBINDS: &'static [::ratatui_input_manager::KeyBind] = &[
                 #(
                     ::ratatui_input_manager::KeyBind {
-                        key: ::crossterm::event::#key_codes,
+                        keys: &[#(::crossterm::event::#key_codes) , *],
                         description: #descriptions,
                     },
                 )*
@@ -103,13 +101,15 @@ fn keymap_impl(input: ItemImpl) -> syn::Result<(ItemImpl, ItemImpl)> {
             fn handle(&mut self, event: &::crossterm::event::Event) {
                 match event {
                     #(
-                        ::crossterm::event::Event::Key(
-                            ::crossterm::event::KeyEvent {
-                                code: ::crossterm::event::#key_codes,
-                                kind: ::crossterm::event::KeyEventKind::Press,
-                                ..
-                            }
-                        ) => self.#fn_names(),
+                        #(
+                            ::crossterm::event::Event::Key(
+                                ::crossterm::event::KeyEvent {
+                                    code: ::crossterm::event::#key_codes,
+                                    kind: ::crossterm::event::KeyEventKind::Press,
+                                    ..
+                                }
+                            )
+                        ) | * => self.#fn_names(),
                     )*
                     _ => {}
                 }
@@ -177,15 +177,11 @@ mod tests {
             impl ::ratatui_input_manager::KeyMap for Foo {
                 const KEYBINDS: &'static [::ratatui_input_manager::KeyBind] = &[
                     ::ratatui_input_manager::KeyBind {
-                        key: ::crossterm::event::KeyCode::Esc,
+                        keys: &[::crossterm::event::KeyCode::Esc, ::crossterm::event::KeyCode::Char('q')],
                         description: None,
                     },
                     ::ratatui_input_manager::KeyBind {
-                        key: ::crossterm::event::KeyCode::Char('q'),
-                        description: None,
-                    },
-                    ::ratatui_input_manager::KeyBind {
-                        key: ::crossterm::event::KeyCode::Char('a'),
+                        keys: &[::crossterm::event::KeyCode::Char('a')],
                         description: Some("The second keybind"),
                     }
                 ];
@@ -198,7 +194,7 @@ mod tests {
                                 kind: ::crossterm::event::KeyEventKind::Press,
                                 ..
                             }
-                        ) => self.bar(),
+                        ) |
                         ::crossterm::event::Event::Key(
                             ::crossterm::event::KeyEvent {
                                 code: ::crossterm::event::KeyCode::Char('q'),

@@ -27,9 +27,9 @@ impl<'k> Widget for Help<'k> {
     where
         Self: Sized,
     {
-        let rows = self.keybinds.iter().map(|KeyBind { key, description }| {
+        let rows = self.keybinds.iter().map(|KeyBind { keys, description }| {
             Row::new([
-                Cell::new(format!("{}", key)),
+                Cell::new(keys.iter().format(", ").to_string()),
                 Cell::new(description.unwrap_or_default()),
             ])
         });
@@ -57,8 +57,12 @@ impl<'k> Widget for HelpBar<'k> {
         Line::from_iter(
             self.keybinds
                 .iter()
-                .map(|KeyBind { key, description }| {
-                    format!("{}: {}", description.unwrap_or_default(), key)
+                .map(|KeyBind { keys, description }| {
+                    format!(
+                        "{}: {}",
+                        description.unwrap_or_default(),
+                        keys.iter().format(", ")
+                    )
                 })
                 .intersperse(" | ".to_string()),
         )
