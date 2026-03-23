@@ -22,7 +22,7 @@ pub trait KeyMap<K: 'static, E> {
     /// Metadata about the key presses which are handled
     const KEYBINDS: &'static [KeyBind<K>];
 
-    /// Handle a [`crossterm::event::Event`] by calling the appropriate handler method
+    /// Handle an event by calling the appropriate handler method
     fn handle(&mut self, event: &E);
 }
 
