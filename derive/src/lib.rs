@@ -13,6 +13,7 @@ use syn::{
 
 #[derive(FromMeta)]
 struct KeyMapAttrs {
+    #[darling(default)]
     backend: Backend,
 }
 
@@ -22,21 +23,26 @@ impl KeyMapAttrs {
     }
 }
 
-#[derive(FromMeta)]
+#[derive(Default, FromMeta)]
 enum Backend {
+    #[cfg_attr(all(feature = "crossterm",), default)]
     Crossterm,
+    #[cfg_attr(all(not(feature = "crossterm"), feature = "termion",), default)]
+    Termion,
 }
 
 impl Backend {
     fn key_type(&self) -> Path {
         match self {
             Backend::Crossterm => parse_quote!(::crossterm::event::KeyCode),
+            Backend::Termion => parse_quote!(::termion::event::Key),
         }
     }
 
     fn event_type(&self) -> Path {
         match self {
             Backend::Crossterm => parse_quote!(::crossterm::event::Event),
+            Backend::Termion => parse_quote!(::termion::event::Event),
         }
     }
 
@@ -49,6 +55,11 @@ impl Backend {
                         kind: ::crossterm::event::KeyEventKind::Press,
                         ..
                     }
+                )
+            },
+            Backend::Termion => quote! {
+                ::termion::event::Event::Key(
+                    ::termion::event::#key_code
                 )
             },
         }
@@ -196,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn test_generated_impl() {
+    fn test_generated_impl_crossterm() {
         let args = KeyMapAttrs {
             backend: Backend::Crossterm,
         };
@@ -264,6 +275,77 @@ mod tests {
                                 kind: ::crossterm::event::KeyEventKind::Press,
                                 ..
                             }
+                        ) => self.baz(),
+                        _ => {}
+                    }
+                }
+            }
+        };
+
+        assert_eq!(format_item(expected_orig), format_item(orig_impl));
+        assert_eq!(
+            format_item::<ItemImpl>(expected_keymap),
+            format_item(keymap_impl)
+        );
+    }
+
+    #[test]
+    fn test_generated_impl_termion() {
+        let args = KeyMapAttrs {
+            backend: Backend::Termion,
+        };
+        let input = parse_quote! {
+            impl Foo {
+                #[keybind(pressed=Key::Esc)]
+                #[keybind(pressed=Key::Char('q'))]
+                fn bar(&mut self) {
+                    todo!()
+                }
+
+                /// The second keybind
+                #[keybind(pressed=Key::Char('a'))]
+                fn baz(&mut self) {
+                    todo!()
+                }
+            }
+        };
+        let (orig_impl, keymap_impl) = keymap_impl(args, input).unwrap();
+        let expected_orig = parse2::<ItemImpl>(quote! {
+            impl Foo {
+                fn bar(&mut self) {
+                    todo!()
+                }
+
+                /// The second keybind
+                fn baz(&mut self) {
+                    todo!()
+                }
+            }
+        })
+        .unwrap();
+        let expected_keymap = parse_quote! {
+            impl ::ratatui_input_manager::KeyMap::<::termion::event::Key, ::termion::event::Event> for Foo {
+                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::termion::event::Key>] = &[
+                    ::ratatui_input_manager::KeyBind::<::termion::event::Key> {
+                        keys: &[Key::Esc, Key::Char('q')],
+                        description: None,
+                    },
+                    ::ratatui_input_manager::KeyBind::<::termion::event::Key> {
+                        keys: &[Key::Char('a')],
+                        description: Some("The second keybind"),
+                    }
+                ];
+
+                fn handle(&mut self, event: &::termion::event::Event) {
+                    match event {
+                        ::termion::event::Event::Key(
+                            ::termion::event::Key::Esc
+                        ) |
+                        ::termion::event::Event::Key(
+                            ::termion::event::Key::Char('q')
+                        ) => self.bar(),
+                        ::termion::event::Event::Key(
+                            ::termion::event::Key::Char('a')
                         ) => self.baz(),
                         _ => {}
                     }

@@ -6,6 +6,11 @@ edition = "2024"
 [lib]
 proc-macro = true
 
+[features]
+default = ["crossterm"]
+crossterm = []
+termion = []
+
 [dependencies]
 proc-macro2 = "1.0.106"
 syn = { version = "2.0.117", features = ["full"] }

@@ -1,13 +1,13 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
-#[cfg(feature = "crossterm")]
-use std::fmt::Display;
 
 /// Ratatui widgets displaying keybinds
 #[cfg(feature = "widgets")]
 pub mod widgets;
+
 pub use ratatui_input_manager_derive::keymap;
+use std::fmt::Display;
 
 /// Key binding metadata, including the handlded key presses and a description of behaviour
 pub struct KeyBind<K: 'static> {
@@ -127,6 +127,47 @@ impl<'k> Display for Vimlike<'k, crossterm::event::KeyCode> {
                     write!(f, "<ISO_Level5_Shift>")
                 }
             },
+        }
+    }
+}
+
+#[cfg(feature = "termion")]
+impl<'k> Display for Vimlike<'k, termion::event::Key> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0 {
+            termion::event::Key::Backspace => write!(f, "<BS>"),
+            termion::event::Key::Left => write!(f, "<Left>"),
+            termion::event::Key::ShiftLeft => write!(f, "<S-Left>"),
+            termion::event::Key::AltLeft => write!(f, "<M-Left>"),
+            termion::event::Key::CtrlLeft => write!(f, "<C-Left>"),
+            termion::event::Key::Right => write!(f, "<Right>"),
+            termion::event::Key::ShiftRight => write!(f, "<S-Right>"),
+            termion::event::Key::AltRight => write!(f, "<M-Right>"),
+            termion::event::Key::CtrlRight => write!(f, "<C-Right>"),
+            termion::event::Key::Up => write!(f, "<Up>"),
+            termion::event::Key::ShiftUp => write!(f, "<S-Up>"),
+            termion::event::Key::AltUp => write!(f, "<M-Up>"),
+            termion::event::Key::CtrlUp => write!(f, "<C-Up>"),
+            termion::event::Key::Down => write!(f, "<Down>"),
+            termion::event::Key::ShiftDown => write!(f, "<S-Down>"),
+            termion::event::Key::AltDown => write!(f, "<M-Down>"),
+            termion::event::Key::CtrlDown => write!(f, "<C-Down>"),
+            termion::event::Key::Home => write!(f, "<Home>"),
+            termion::event::Key::CtrlHome => write!(f, "<C-Home>"),
+            termion::event::Key::End => write!(f, "<End>"),
+            termion::event::Key::CtrlEnd => write!(f, "<C-End>"),
+            termion::event::Key::PageUp => write!(f, "<PageUp>"),
+            termion::event::Key::PageDown => write!(f, "<PageDown>"),
+            termion::event::Key::BackTab => write!(f, "<S-Tab>"),
+            termion::event::Key::Delete => write!(f, "<Del>"),
+            termion::event::Key::Insert => write!(f, "<Insert>"),
+            termion::event::Key::F(num) => write!(f, "<F{num}>"),
+            termion::event::Key::Char(c) => write!(f, "{c}"),
+            termion::event::Key::Alt(c) => write!(f, "<M-{c}>"),
+            termion::event::Key::Ctrl(c) => write!(f, "<C-{c}>"),
+            termion::event::Key::Null => write!(f, "<Nul>"),
+            termion::event::Key::Esc => write!(f, "<Esc>"),
+            _ => write!(f, "<Unknown>"),
         }
     }
 }
