@@ -29,6 +29,15 @@ enum Backend {
     Crossterm,
     #[cfg_attr(all(not(feature = "crossterm"), feature = "termion",), default)]
     Termion,
+    #[cfg_attr(
+        all(
+            not(feature = "crossterm"),
+            not(feature = "termion"),
+            feature = "termwiz"
+        ),
+        default
+    )]
+    Termwiz,
 }
 
 impl Backend {
@@ -36,6 +45,7 @@ impl Backend {
         match self {
             Backend::Crossterm => parse_quote!(::crossterm::event::KeyCode),
             Backend::Termion => parse_quote!(::termion::event::Key),
+            Backend::Termwiz => parse_quote!(::termwiz::input::KeyCode),
         }
     }
 
@@ -43,6 +53,7 @@ impl Backend {
         match self {
             Backend::Crossterm => parse_quote!(::crossterm::event::Event),
             Backend::Termion => parse_quote!(::termion::event::Event),
+            Backend::Termwiz => parse_quote!(::termwiz::input::InputEvent),
         }
     }
 
@@ -60,6 +71,14 @@ impl Backend {
             Backend::Termion => quote! {
                 ::termion::event::Event::Key(
                     ::termion::event::#key_code
+                )
+            },
+            Backend::Termwiz => quote! {
+                ::termwiz::input::InputEvent::Key(
+                    ::termwiz::input::KeyEvent {
+                        key: ::termwiz::input::#key_code,
+                        modifiers: ::termwiz::input::Modifiers::NONE,
+                    }
                 )
             },
         }
@@ -346,6 +365,86 @@ mod tests {
                         ) => self.bar(),
                         ::termion::event::Event::Key(
                             ::termion::event::Key::Char('a')
+                        ) => self.baz(),
+                        _ => {}
+                    }
+                }
+            }
+        };
+
+        assert_eq!(format_item(expected_orig), format_item(orig_impl));
+        assert_eq!(
+            format_item::<ItemImpl>(expected_keymap),
+            format_item(keymap_impl)
+        );
+    }
+
+    #[test]
+    fn test_generated_impl_termwiz() {
+        let args = KeyMapAttrs {
+            backend: Backend::Termwiz,
+        };
+        let input = parse_quote! {
+            impl Foo {
+                #[keybind(pressed=KeyCode::Escape)]
+                #[keybind(pressed=KeyCode::Char('q'))]
+                fn bar(&mut self) {
+                    todo!()
+                }
+
+                /// The second keybind
+                #[keybind(pressed=KeyCode::Char('a'))]
+                fn baz(&mut self) {
+                    todo!()
+                }
+            }
+        };
+        let (orig_impl, keymap_impl) = keymap_impl(args, input).unwrap();
+        let expected_orig = parse2::<ItemImpl>(quote! {
+            impl Foo {
+                fn bar(&mut self) {
+                    todo!()
+                }
+
+                /// The second keybind
+                fn baz(&mut self) {
+                    todo!()
+                }
+            }
+        })
+        .unwrap();
+        let expected_keymap = parse_quote! {
+            impl ::ratatui_input_manager::KeyMap::<::termwiz::input::KeyCode, ::termwiz::input::InputEvent> for Foo {
+                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::termwiz::input::KeyCode>] = &[
+                    ::ratatui_input_manager::KeyBind::<::termwiz::input::KeyCode> {
+                        keys: &[KeyCode::Escape, KeyCode::Char('q')],
+                        description: None,
+                    },
+                    ::ratatui_input_manager::KeyBind::<::termwiz::input::KeyCode> {
+                        keys: &[KeyCode::Char('a')],
+                        description: Some("The second keybind"),
+                    }
+                ];
+
+                fn handle(&mut self, event: &::termwiz::input::InputEvent) {
+                    match event {
+                        ::termwiz::input::InputEvent::Key(
+                            ::termwiz::input::KeyEvent {
+                                key: ::termwiz::input::KeyCode::Escape,
+                                modifiers: ::termwiz::input::Modifiers::NONE,
+                            }
+                        ) |
+                        ::termwiz::input::InputEvent::Key(
+                            ::termwiz::input::KeyEvent {
+                                key: ::termwiz::input::KeyCode::Char('q'),
+                                modifiers: ::termwiz::input::Modifiers::NONE,
+                            }
+                        ) => self.bar(),
+                        ::termwiz::input::InputEvent::Key(
+                            ::termwiz::input::KeyEvent {
+                                key: ::termwiz::input::KeyCode::Char('a'),
+                                modifiers: ::termwiz::input::Modifiers::NONE,
+                            }
                         ) => self.baz(),
                         _ => {}
                     }
