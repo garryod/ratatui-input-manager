@@ -1,4 +1,4 @@
-use crate::KeyBind;
+use crate::{KeyBind, VimlikeExt};
 use itertools::Itertools;
 use ratatui_core::{
     buffer::Buffer,
@@ -14,18 +14,18 @@ use ratatui_widgets::{
 };
 
 /// A [`Widget`] displaying a table of bound keys and their description
-pub struct Help<'k> {
-    keybinds: &'k [KeyBind],
+pub struct Help<'k, E: 'static> {
+    keybinds: &'k [KeyBind<E>],
     block: Option<Block<'k>>,
     key_style: Style,
     description_style: Style,
 }
 
-impl<'k> Help<'k> {
+impl<'k, E: 'static> Help<'k, E> {
     /// Construct a [`Help`] [`Widget`] from a collection of [`KeyBind`]s, typically obtained by
     /// inspecting the metadata as [`crate::KeyMap::KEYBINDS`] or
     /// [`crate::DynKeyMap::keybinds`]
-    pub fn new(keybinds: &'k [KeyBind]) -> Self {
+    pub fn new(keybinds: &'k [KeyBind<E>]) -> Self {
         Self {
             keybinds,
             block: None,
@@ -68,7 +68,7 @@ impl<'k> Help<'k> {
     }
 }
 
-impl<'k> Widget for Help<'k> {
+impl<'k, E: 'static + VimlikeExt<'k>> Widget for Help<'k, E> {
     fn render(self, area: Rect, buf: &mut Buffer)
     where
         Self: Sized,
@@ -76,7 +76,13 @@ impl<'k> Widget for Help<'k> {
         let table = Table::new(
             self.keybinds.iter().map(|KeyBind { keys, description }| {
                 Row::new([
-                    Cell::new(keys.iter().format(", ").to_string()).style(self.key_style),
+                    Cell::new(
+                        keys.iter()
+                            .map(|key| key.as_vimlike())
+                            .format(", ")
+                            .to_string(),
+                    )
+                    .style(self.key_style),
                     Cell::new(description.unwrap_or_default()).style(self.description_style),
                 ])
             }),
@@ -94,18 +100,18 @@ impl<'k> Widget for Help<'k> {
 }
 
 /// A [`Widget`] displaying a single row of bound keys and their descriptions
-pub struct HelpBar<'k> {
-    keybinds: &'k [KeyBind],
+pub struct HelpBar<'k, E: 'static> {
+    keybinds: &'k [KeyBind<E>],
     key_style: Style,
     description_style: Style,
     separator_style: Style,
 }
 
-impl<'k> HelpBar<'k> {
+impl<'k, E: 'static> HelpBar<'k, E> {
     /// Construct a [`HelpBar`] [`Widget`] from a collection of [`KeyBind`]s, typically obtained by
     /// inspecting the metadata as [`crate::KeyMap::KEYBINDS`] or
     /// [`crate::DynKeyMap::keybinds`]
-    pub fn new(keybinds: &'k [KeyBind]) -> Self {
+    pub fn new(keybinds: &'k [KeyBind<E>]) -> Self {
         Self {
             keybinds,
             key_style: Style::default(),
@@ -151,21 +157,23 @@ impl<'k> HelpBar<'k> {
     }
 }
 
-impl<'k> Widget for HelpBar<'k> {
+impl<'k, E: 'static + VimlikeExt<'k>> Widget for HelpBar<'k, E> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         Line::from_iter(self.keybinds.iter().enumerate().flat_map(
             |(idx, KeyBind { keys, description })| {
                 [
-                    if idx == 0 {
-                        Span::styled("", self.separator_style)
-                    } else {
-                        Span::styled(" | ", self.separator_style)
-                    },
+                    Span::styled(if idx == 0 { "" } else { " | " }, self.separator_style),
                     Span::styled(
-                        format!("{}:", description.unwrap_or_default()),
+                        format!("{}: ", description.unwrap_or_default()),
                         self.description_style,
                     ),
-                    Span::styled(keys.iter().format(", ").to_string(), self.key_style),
+                    Span::styled(
+                        keys.iter()
+                            .map(|key| key.as_vimlike())
+                            .format(", ")
+                            .to_string(),
+                        self.key_style,
+                    ),
                 ]
             },
         ))

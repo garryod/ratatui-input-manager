@@ -2,18 +2,62 @@
 #![warn(missing_docs)]
 //! Macros for [ratatui-input-manager](https://crates.io/crates/ratatui-input-manager)
 
-use darling::FromAttributes;
+use darling::{FromAttributes, FromMeta, ast::NestedMeta};
 use itertools::MultiUnzip;
 use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
 use syn::{
-    Expr, ExprLit, ImplItem, ItemImpl, Lit, Meta, MetaNameValue, parse_macro_input, parse2,
-    spanned::Spanned,
+    Expr, ExprLit, ImplItem, ItemImpl, Lit, Meta, MetaNameValue, Path, parse_macro_input,
+    parse_quote, parse2, spanned::Spanned,
 };
+
+#[derive(FromMeta)]
+struct KeyMapAttrs {
+    backend: Backend,
+}
+
+impl KeyMapAttrs {
+    fn parse_attrs(attrs: TokenStream) -> darling::Result<Self> {
+        KeyMapAttrs::from_list(&NestedMeta::parse_meta_list(attrs)?)
+    }
+}
+
+#[derive(FromMeta)]
+enum Backend {
+    Crossterm,
+}
+
+impl Backend {
+    fn key_type(&self) -> Path {
+        match self {
+            Backend::Crossterm => parse_quote!(::crossterm::event::KeyCode),
+        }
+    }
+
+    fn event_type(&self) -> Path {
+        match self {
+            Backend::Crossterm => parse_quote!(::crossterm::event::Event),
+        }
+    }
+
+    fn match_clause(&self, key_code: &Expr) -> TokenStream {
+        match self {
+            Backend::Crossterm => quote! {
+                ::crossterm::event::Event::Key(
+                    ::crossterm::event::KeyEvent {
+                        code: ::crossterm::event::#key_code,
+                        kind: ::crossterm::event::KeyEventKind::Press,
+                        ..
+                    }
+                )
+            },
+        }
+    }
+}
 
 #[derive(FromAttributes)]
 #[darling(attributes(keybind), forward_attrs)]
-struct KeybindArgs {
+struct KeyBindAttrs {
     #[darling(multiple)]
     pressed: Vec<syn::Expr>,
     attrs: Vec<syn::Attribute>,
@@ -23,11 +67,15 @@ struct KeybindArgs {
 /// the appropriate methods according to the attributes provided
 #[proc_macro_attribute]
 pub fn keymap(
-    _attrs: proc_macro::TokenStream,
+    attrs: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
+    let args = match KeyMapAttrs::parse_attrs(attrs.into()) {
+        Ok(args) => args,
+        Err(err) => return err.write_errors().into(),
+    };
     let input = parse_macro_input!(input as ItemImpl);
-    match keymap_impl(input) {
+    match keymap_impl(args, input) {
         Ok((original_impl, keymap_impl)) => TokenStream::from_iter([
             original_impl.to_token_stream(),
             keymap_impl.to_token_stream(),
@@ -37,14 +85,15 @@ pub fn keymap(
     }
 }
 
-fn keymap_impl(input: ItemImpl) -> syn::Result<(ItemImpl, ItemImpl)> {
+fn keymap_impl(args: KeyMapAttrs, input: ItemImpl) -> syn::Result<(ItemImpl, ItemImpl)> {
     let ItemImpl { self_ty, items, .. } = input;
 
     let (keybinds, orig_impls) = items
         .into_iter()
         .map(|item| match item {
             ImplItem::Fn(mut item_fn) => {
-                let KeybindArgs { pressed, attrs } = KeybindArgs::from_attributes(&item_fn.attrs)?;
+                let KeyBindAttrs { pressed, attrs } =
+                    KeyBindAttrs::from_attributes(&item_fn.attrs)?;
                 let doc = attrs.iter().find_map(|attr| {
                     if let Meta::NameValue(MetaNameValue { path, value, .. }) = &attr.meta
                         && path.is_ident("doc")
@@ -87,47 +136,52 @@ fn keymap_impl(input: ItemImpl) -> syn::Result<(ItemImpl, ItemImpl)> {
         })
         .multiunzip();
 
-    let keymap_impl = parse2(quote::quote! {
-        impl ::ratatui_input_manager::KeyMap for #self_ty {
-            const KEYBINDS: &'static [::ratatui_input_manager::KeyBind] = &[
+    let key_type = args.backend.key_type();
+    let event_type = args.backend.event_type();
+    let match_clauses = key_codes
+        .iter()
+        .map(|key_codes| {
+            key_codes
+                .iter()
+                .map(|key_code| args.backend.match_clause(key_code))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let keymap_impl = parse_quote! {
+        impl ::ratatui_input_manager::KeyMap::<#key_type, #event_type> for #self_ty {
+            const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<#key_type>] = &[
                 #(
-                    ::ratatui_input_manager::KeyBind {
-                        keys: &[#(::crossterm::event::#key_codes) , *],
+                    ::ratatui_input_manager::KeyBind::<#key_type> {
+                        keys: &[#(#key_codes) , *],
                         description: #descriptions,
                     },
                 )*
             ];
 
-            fn handle(&mut self, event: &::crossterm::event::Event) {
+            fn handle(&mut self, event: &#event_type) {
                 match event {
                     #(
                         #(
-                            ::crossterm::event::Event::Key(
-                                ::crossterm::event::KeyEvent {
-                                    code: ::crossterm::event::#key_codes,
-                                    kind: ::crossterm::event::KeyEventKind::Press,
-                                    ..
-                                }
-                            )
+                            #match_clauses
                         ) | * => self.#fn_names(),
                     )*
                     _ => {}
                 }
             }
         }
-    })
-    .unwrap();
+    };
 
     Ok((orig_impl, keymap_impl))
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::keymap_impl;
+    use super::{Backend, KeyMapAttrs, keymap_impl};
     use pretty_assertions::assert_eq;
     use prettyplease::unparse;
     use quote::quote;
-    use syn::{Item, ItemImpl, parse2};
+    use syn::{Item, ItemImpl, parse_quote, parse2};
 
     fn format_item<I>(item: I) -> String
     where
@@ -143,7 +197,10 @@ mod tests {
 
     #[test]
     fn test_generated_impl() {
-        let input = parse2(quote! {
+        let args = KeyMapAttrs {
+            backend: Backend::Crossterm,
+        };
+        let input = parse_quote! {
             impl Foo {
                 #[keybind(pressed=KeyCode::Esc)]
                 #[keybind(pressed=KeyCode::Char('q'))]
@@ -157,9 +214,8 @@ mod tests {
                     todo!()
                 }
             }
-        })
-        .unwrap();
-        let (orig_impl, keymap_impl) = keymap_impl(input).unwrap();
+        };
+        let (orig_impl, keymap_impl) = keymap_impl(args, input).unwrap();
         let expected_orig = parse2::<ItemImpl>(quote! {
             impl Foo {
                 fn bar(&mut self) {
@@ -173,15 +229,15 @@ mod tests {
             }
         })
         .unwrap();
-        let expected_keymap = parse2::<ItemImpl>(quote! {
-            impl ::ratatui_input_manager::KeyMap for Foo {
-                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind] = &[
-                    ::ratatui_input_manager::KeyBind {
-                        keys: &[::crossterm::event::KeyCode::Esc, ::crossterm::event::KeyCode::Char('q')],
+        let expected_keymap = parse_quote! {
+            impl ::ratatui_input_manager::KeyMap::<::crossterm::event::KeyCode, ::crossterm::event::Event> for Foo {
+                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::crossterm::event::KeyCode>] = &[
+                    ::ratatui_input_manager::KeyBind::<::crossterm::event::KeyCode> {
+                        keys: &[KeyCode::Esc, KeyCode::Char('q')],
                         description: None,
                     },
-                    ::ratatui_input_manager::KeyBind {
-                        keys: &[::crossterm::event::KeyCode::Char('a')],
+                    ::ratatui_input_manager::KeyBind::<::crossterm::event::KeyCode> {
+                        keys: &[KeyCode::Char('a')],
                         description: Some("The second keybind"),
                     }
                 ];
@@ -213,10 +269,12 @@ mod tests {
                     }
                 }
             }
-        })
-        .unwrap();
+        };
 
         assert_eq!(format_item(expected_orig), format_item(orig_impl));
-        assert_eq!(format_item(expected_keymap), format_item(keymap_impl));
+        assert_eq!(
+            format_item::<ItemImpl>(expected_keymap),
+            format_item(keymap_impl)
+        );
     }
 }
