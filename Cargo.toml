@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["crossterm"]
+default = ["crossterm", "widgets"]
 crossterm = ["dep:crossterm", "ratatui-input-manager-derive/crossterm"]
 widgets = ["dep:itertools", "dep:ratatui-core", "dep:ratatui-widgets"]
 termion = ["dep:termion", "ratatui-input-manager-derive/termion"]
