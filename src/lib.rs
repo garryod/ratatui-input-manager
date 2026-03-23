@@ -9,7 +9,7 @@ pub mod widgets;
 pub use ratatui_input_manager_derive::keymap;
 use std::fmt::Display;
 
-/// Key binding metadata, including the handlded key presses and a description of behaviour
+/// Key binding metadata, including the handled key presses and a description of behaviour
 pub struct KeyBind<K: 'static> {
     /// The keys which is handled by this binding
     pub keys: &'static [K],
@@ -26,7 +26,7 @@ pub trait KeyMap<K: 'static, E> {
     fn handle(&mut self, event: &E);
 }
 
-/// A dyn compatible equivilent to [`KeyMap`]
+/// A dyn compatible equivalent to [`KeyMap`]
 #[expect(missing_docs)]
 pub trait DynKeyMap<K: 'static, E> {
     fn keybinds(&self) -> &'static [KeyBind<K>];
@@ -46,7 +46,7 @@ impl<K: 'static, E, T: KeyMap<K, E>> DynKeyMap<K, E> for T {
 
 struct Vimlike<'k, K>(&'k K);
 
-/// Provides a methanism for [`Display`]ing key press like types in a manner similar to key press
+/// Provides a mechanism for [`Display`]ing key press like types in a manner similar to key press
 /// hints in vim.
 pub trait VimlikeExt<'k>: Sized {
     /// Convert this type to one which implements [`Display`] in a manner similar to key press
