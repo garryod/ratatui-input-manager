@@ -10,6 +10,7 @@ proc-macro = true
 default = ["crossterm"]
 crossterm = []
 termion = []
+termwiz = []
 
 [dependencies]
 proc-macro2 = "1.0.106"

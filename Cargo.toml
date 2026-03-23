@@ -8,6 +8,7 @@ default = ["crossterm"]
 crossterm = ["dep:crossterm", "ratatui-input-manager-derive/crossterm"]
 widgets = ["dep:itertools", "dep:ratatui-core", "dep:ratatui-widgets"]
 termion = ["dep:termion", "ratatui-input-manager-derive/termion"]
+termwiz = ["dep:termwiz", "ratatui-input-manager-derive/termwiz"]
 
 [dependencies]
 crossterm = { workspace = true, optional = true }
@@ -16,6 +17,7 @@ ratatui-core = { version = "0.1.0", default-features = false, optional = true }
 ratatui-input-manager-derive = { path = "derive", default-features = false }
 ratatui-widgets = { version = "0.3.0", default-features = false, optional = true }
 termion = { version = "4.0.6", optional = true }
+termwiz = { version = "0.23.3", optional = true }
 
 [workspace]
 members = [".", "derive"]
