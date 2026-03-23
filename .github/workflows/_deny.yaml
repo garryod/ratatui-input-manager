@@ -1,0 +1,17 @@
+name: Cargo Deny
+
+on:
+  workflow_call:
+
+jobs:
+  deny:
+    name: Deny
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Run Cargo Deny
+        uses: EmbarkStudios/cargo-deny-action@v2.0.15
+        with:
+          command: check
