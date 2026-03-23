@@ -7,3 +7,10 @@ on:
 jobs:
   deny:
     uses: ./.github/workflows/_deny.yaml
+
+  check:
+    uses: ./.github/workflows/_check.yaml
+
+  test:
+    uses: ./.github/workflows/_test.yaml
+    needs: check
