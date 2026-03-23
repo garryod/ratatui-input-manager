@@ -1,0 +1,9 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  deny:
+    uses: ./.github/workflows/_deny.yaml
