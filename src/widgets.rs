@@ -14,6 +14,35 @@ use ratatui_widgets::{
 };
 
 /// A [`Widget`] displaying a table of bound keys and their description
+///
+/// # Example
+///
+/// ```rust
+/// use crossterm::event::KeyCode;
+/// use ratatui_core::{
+///     style::{Color, Style},
+///     terminal::Frame,
+/// };
+/// use ratatui_input_manager::{KeyMap, keymap};
+/// use ratatui_input_manager::widgets::Help;
+/// use ratatui_widgets::block::Block;
+///
+/// #[derive(Default)]
+/// struct App;
+///
+/// #[keymap(backend = "crossterm")]
+/// impl App {
+///     #[keybind(pressed = KeyCode::Char('q'))]
+///     fn quit(&mut self) {}
+/// }
+///
+/// fn render_help(frame: &mut Frame) {
+///     let help = Help::new(App::KEYBINDS)
+///         .block(Block::default().title("Controls"))
+///         .key_style(Style::default().fg(Color::Cyan));
+///     frame.render_widget(help, frame.area());
+/// }
+/// ```
 pub struct Help<'k, E: 'static> {
     keybinds: &'k [KeyBind<E>],
     block: Option<Block<'k>>,
@@ -100,6 +129,34 @@ impl<'k, E: 'static + VimlikeExt<'k>> Widget for Help<'k, E> {
 }
 
 /// A [`Widget`] displaying a single row of bound keys and their descriptions
+///
+/// # Example
+///
+/// ```rust
+/// use crossterm::event::KeyCode;
+/// use ratatui_core::{
+///     style::{Color, Style},
+///     terminal::Frame,
+/// };
+/// use ratatui_input_manager::{KeyMap, keymap};
+/// use ratatui_input_manager::widgets::HelpBar;
+///
+/// #[derive(Default)]
+/// struct App;
+///
+/// #[keymap(backend = "crossterm")]
+/// impl App {
+///     #[keybind(pressed = KeyCode::Char('q'))]
+///     fn quit(&mut self) {}
+/// }
+///
+/// fn render_help_bar(frame: &mut Frame) {
+///     let help = HelpBar::new(App::KEYBINDS)
+///         .key_style(Style::default().fg(Color::Cyan))
+///         .separator_style(Style::default().fg(Color::DarkGray));
+///     frame.render_widget(help, frame.area());
+/// }
+/// ```
 pub struct HelpBar<'k, E: 'static> {
     keybinds: &'k [KeyBind<E>],
     key_style: Style,
