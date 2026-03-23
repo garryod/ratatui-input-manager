@@ -1,3 +1,4 @@
+#![cfg(feature = "crossterm")]
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui_input_manager::{KeyMap, keymap};
 
@@ -7,7 +8,7 @@ struct TestKeyMap {
     a: bool,
 }
 
-#[keymap]
+#[keymap(backend = "crossterm")]
 impl TestKeyMap {
     #[keybind(pressed = KeyCode::Esc)]
     #[keybind(pressed = KeyCode::Char('q'))]
