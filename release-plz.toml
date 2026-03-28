@@ -1,0 +1,7 @@
+[[package]]
+name = "ratatui-input-manager"
+version_group = "ratatui-input-manager"
+
+[[package]]
+name = "ratatui-input-manager-derive"
+version_group = "ratatui-input-manager"
