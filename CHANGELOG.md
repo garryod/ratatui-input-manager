@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/garryod/ratatui-input-manager/compare/ratatui-input-manager-v0.1.0...ratatui-input-manager-v0.2.0) - 2026-03-28
+
+### Added
+
+- add modifiers to widget hints
+- add key modifier support
+
+### Other
+
+- group release-plz versions of crates
+- factor out key press types
+- add additional tests for modifier behaviour
+- release v0.1.0
+
 ## [0.1.0](https://github.com/garryod/ratatui-input-manager/releases/tag/ratatui-input-manager-v0.1.0) - 2026-03-28
 
 ### Added
