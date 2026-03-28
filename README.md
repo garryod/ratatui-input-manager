@@ -13,15 +13,14 @@ ratatui-input-manager = { version = "0.1.0", features = ["crossterm", "widgets"]
 
 ```rust
 use std::io;
-use std::time::Duration;
 
 use crossterm::{
-    event::{self, KeyCode},
+    event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
     terminal::{
         enable_raw_mode,
         disable_raw_mode,
         EnterAlternateScreen,
-        LeaveAlternateScreen
+        LeaveAlternateScreen,
     },
     ExecutableCommand,
 };
@@ -35,9 +34,10 @@ use ratatui_core::{
 use ratatui_input_manager::{keymap, KeyMap};
 use ratatui_input_manager::widgets::HelpBar;
 
+#[derive(Default)]
 struct App {
     counter: i32,
-    quit: bool
+    quit: bool,
 }
 
 #[keymap(backend = "crossterm")]
@@ -62,11 +62,17 @@ impl App {
     }
 }
 
+const TEST_EVENTS: &[Event] = &[
+    Event::Key(KeyEvent::new(KeyCode::Char('+'), KeyModifiers::NONE)),
+    Event::Key(KeyEvent::new(KeyCode::Char('-'), KeyModifiers::NONE)),
+    Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
+];
+
 fn main() -> io::Result<()> {
     let mut terminal = Terminal::new(TestBackend::new(80, 32)).unwrap();
 
-    // `quit` set to `true` to ensure test exits
-    let mut app = App { counter: 0, quit: true };
+    let mut app = App::default();
+    let mut events = TEST_EVENTS.iter();
 
     loop {
         terminal.draw(|frame: &mut Frame| {
@@ -85,9 +91,10 @@ fn main() -> io::Result<()> {
             );
         }).unwrap();
 
-        if event::poll(Duration::from_millis(10))? {
-            let pressed = event::read()?;
-            app.handle(&pressed);
+        /// use [`crossterm::event::poll`] in place of iterating through test
+        /// events
+        if let Some(event) = events.next() {
+            app.handle(event);
         }
 
         if app.quit {
