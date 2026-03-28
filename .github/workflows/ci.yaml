@@ -8,12 +8,12 @@ jobs:
   deny:
     uses: ./.github/workflows/_deny.yaml
 
-  check:
-    uses: ./.github/workflows/_check.yaml
+  lint:
+    uses: ./.github/workflows/_lint.yaml
 
   test:
     uses: ./.github/workflows/_test.yaml
-    needs: check
+    needs: lint
 
   release_pr:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
