@@ -7,8 +7,8 @@ use itertools::MultiUnzip;
 use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
 use syn::{
-    Expr, ExprLit, ImplItem, ItemImpl, Lit, Meta, MetaNameValue, Path, parse_macro_input,
-    parse_quote, parse2, spanned::Spanned,
+    Expr, ExprLit, ImplItem, ItemImpl, Lit, Meta, MetaNameValue, parse_macro_input, parse_quote,
+    spanned::Spanned,
 };
 
 #[derive(FromMeta)]
@@ -41,55 +41,71 @@ enum Backend {
 }
 
 impl Backend {
-    fn key_type(&self) -> Path {
+    fn backend_type(&self) -> Expr {
         match self {
-            Backend::Crossterm => parse_quote!(::crossterm::event::KeyCode),
-            Backend::Termion => parse_quote!(::termion::event::Key),
-            Backend::Termwiz => parse_quote!(::termwiz::input::KeyCode),
+            Self::Crossterm => parse_quote!(::ratatui_input_manager::CrosstermBackend),
+            Self::Termion => parse_quote!(::ratatui_input_manager::TermionBackend),
+            Self::Termwiz => parse_quote!(::ratatui_input_manager::TermwizBackend),
         }
     }
 
-    fn event_type(&self) -> Path {
+    fn combine_modifiers(&self, modifiers: &[Expr]) -> Expr {
         match self {
-            Backend::Crossterm => parse_quote!(::crossterm::event::Event),
-            Backend::Termion => parse_quote!(::termion::event::Event),
-            Backend::Termwiz => parse_quote!(::termwiz::input::InputEvent),
+            Self::Crossterm => {
+                parse_quote! {::crossterm::event::KeyModifiers::NONE #(.union(#modifiers))*}
+            }
+            Self::Termion => parse_quote! { () },
+            Self::Termwiz => {
+                parse_quote! { ::termwiz::input::Modifiers::NONE #(.union(#modifiers))* }
+            }
         }
     }
 
-    fn match_clause(&self, key_code: &Expr) -> TokenStream {
+    fn input_event(&self, key_code: &Expr, combined_modifiers: &Expr) -> TokenStream {
         match self {
-            Backend::Crossterm => quote! {
-                ::crossterm::event::Event::Key(
-                    ::crossterm::event::KeyEvent {
-                        code: ::crossterm::event::#key_code,
-                        kind: ::crossterm::event::KeyEventKind::Press,
-                        ..
-                    }
-                )
-            },
-            Backend::Termion => quote! {
+            Self::Crossterm => {
+                quote! {
+                    ::crossterm::event::Event::Key(
+                        ::crossterm::event::KeyEvent {
+                            code: #key_code,
+                            modifiers,
+                            kind: ::crossterm::event::KeyEventKind::Press,
+                            ..
+                        }
+                    ) if modifiers.contains(#combined_modifiers)
+                }
+            }
+            Self::Termion => quote! {
                 ::termion::event::Event::Key(
                     ::termion::event::#key_code
                 )
             },
-            Backend::Termwiz => quote! {
-                ::termwiz::input::InputEvent::Key(
-                    ::termwiz::input::KeyEvent {
-                        key: ::termwiz::input::#key_code,
-                        modifiers: ::termwiz::input::Modifiers::NONE,
-                    }
-                )
-            },
+            Self::Termwiz => {
+                quote! {
+                    ::termwiz::input::InputEvent::Key(
+                        ::termwiz::input::KeyEvent {
+                            key: #key_code,
+                            modifiers,
+                        }
+                    ) if modifiers.contains(#combined_modifiers)
+                }
+            }
         }
     }
+}
+
+#[derive(Debug, FromMeta)]
+struct Pressed {
+    key: syn::Expr,
+    #[darling(multiple)]
+    modifiers: Vec<syn::Expr>,
 }
 
 #[derive(FromAttributes)]
 #[darling(attributes(keybind), forward_attrs)]
 struct KeyBindAttrs {
     #[darling(multiple)]
-    pressed: Vec<syn::Expr>,
+    pressed: Vec<Pressed>,
     attrs: Vec<syn::Attribute>,
 }
 
@@ -148,54 +164,60 @@ fn keymap_impl(args: KeyMapAttrs, input: ItemImpl) -> syn::Result<(ItemImpl, Ite
         })
         .collect::<Result<(Vec<_>, Vec<_>), _>>()?;
 
-    let orig_impl = parse2(quote::quote! {
+    let orig_impl = parse_quote! {
         impl #self_ty {
             #(#orig_impls)*
         }
-    })
-    .unwrap();
+    };
 
-    let (fn_names, key_codes, descriptions): (Vec<_>, Vec<_>, Vec<_>) = keybinds
+    let (fn_names, match_arms, key_codes, combined_modifiers, descriptions): (
+        Vec<_>,
+        Vec<Vec<_>>,
+        Vec<Vec<_>>,
+        Vec<Vec<_>>,
+        Vec<_>,
+    ) = keybinds
         .into_iter()
         .map(|(fn_name, pressed, description)| {
             let description = match description {
                 Some(description) => quote! {Some(#description)},
                 None => quote! {None},
             };
-            (fn_name, pressed, description)
+            let (match_arm, key_codes, combined_modifiers) = pressed
+                .into_iter()
+                .map(|Pressed { key, modifiers }| {
+                    let combined_modifiers = args.backend.combine_modifiers(&modifiers);
+                    let match_arm = args.backend.input_event(&key, &combined_modifiers);
+                    (match_arm, key, combined_modifiers)
+                })
+                .multiunzip();
+            (
+                fn_name,
+                match_arm,
+                key_codes,
+                combined_modifiers,
+                description,
+            )
         })
         .multiunzip();
 
-    let key_type = args.backend.key_type();
-    let event_type = args.backend.event_type();
-    let match_clauses = key_codes
-        .iter()
-        .map(|key_codes| {
-            key_codes
-                .iter()
-                .map(|key_code| args.backend.match_clause(key_code))
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
+    let backend_type = args.backend.backend_type();
 
     let keymap_impl = parse_quote! {
-        impl ::ratatui_input_manager::KeyMap::<#key_type, #event_type> for #self_ty {
-            const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<#key_type>] = &[
+        impl ::ratatui_input_manager::KeyMap::<#backend_type> for #self_ty {
+            const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<#backend_type>] = &[
                 #(
-                    ::ratatui_input_manager::KeyBind::<#key_type> {
-                        keys: &[#(#key_codes) , *],
+                    ::ratatui_input_manager::KeyBind::<#backend_type> {
+                        keys: &[#(#key_codes),*],
+                        modifiers: &[#(#combined_modifiers),*],
                         description: #descriptions,
                     },
                 )*
             ];
 
-            fn handle(&mut self, event: &#event_type) {
+            fn handle(&mut self, event: &<#backend_type as ::ratatui_input_manager::Backend>::Event) {
                 match event {
-                    #(
-                        #(
-                            #match_clauses
-                        ) | * => self.#fn_names(),
-                    )*
+                    #(#(#match_arms => self.#fn_names(),)*)*
                     _ => {}
                 }
             }
@@ -232,14 +254,14 @@ mod tests {
         };
         let input = parse_quote! {
             impl Foo {
-                #[keybind(pressed=KeyCode::Esc)]
-                #[keybind(pressed=KeyCode::Char('q'))]
+                #[keybind(pressed(key=KeyCode::Esc))]
+                #[keybind(pressed(key=KeyCode::Char('q')))]
                 fn bar(&mut self) {
                     todo!()
                 }
 
                 /// The second keybind
-                #[keybind(pressed=KeyCode::Char('a'))]
+                #[keybind(pressed(key=KeyCode::Char('a'), modifiers=KeyModifiers::CONTROL, modifiers=KeyModifiers::SHIFT))]
                 fn baz(&mut self) {
                     todo!()
                 }
@@ -259,42 +281,56 @@ mod tests {
             }
         })
         .unwrap();
-        let expected_keymap = parse_quote! {
-            impl ::ratatui_input_manager::KeyMap::<::crossterm::event::KeyCode, ::crossterm::event::Event> for Foo {
-                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::crossterm::event::KeyCode>] = &[
-                    ::ratatui_input_manager::KeyBind::<::crossterm::event::KeyCode> {
+        let expected_keymap: ItemImpl = parse_quote! {
+            impl ::ratatui_input_manager::KeyMap::<::ratatui_input_manager::CrosstermBackend> for Foo {
+                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::ratatui_input_manager::CrosstermBackend>] = &[
+                    ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::CrosstermBackend> {
                         keys: &[KeyCode::Esc, KeyCode::Char('q')],
+                        modifiers: &[::crossterm::event::KeyModifiers::NONE, ::crossterm::event::KeyModifiers::NONE],
                         description: None,
                     },
-                    ::ratatui_input_manager::KeyBind::<::crossterm::event::KeyCode> {
+                    ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::CrosstermBackend> {
                         keys: &[KeyCode::Char('a')],
+                        modifiers: &[
+                            ::crossterm::event::KeyModifiers::NONE
+                                .union(KeyModifiers::CONTROL)
+                                .union(KeyModifiers::SHIFT),
+                        ],
                         description: Some("The second keybind"),
                     }
                 ];
 
-                fn handle(&mut self, event: &::crossterm::event::Event) {
+                fn handle(&mut self, event: &<::ratatui_input_manager::CrosstermBackend as ::ratatui_input_manager::Backend>::Event) {
                     match event {
                         ::crossterm::event::Event::Key(
                             ::crossterm::event::KeyEvent {
-                                code: ::crossterm::event::KeyCode::Esc,
+                                code: KeyCode::Esc,
+                                modifiers,
                                 kind: ::crossterm::event::KeyEventKind::Press,
                                 ..
-                            }
-                        ) |
+                            },
+                        ) if modifiers.contains(::crossterm::event::KeyModifiers::NONE) => self.bar(),
                         ::crossterm::event::Event::Key(
                             ::crossterm::event::KeyEvent {
-                                code: ::crossterm::event::KeyCode::Char('q'),
+                                code: KeyCode::Char('q'),
+                                modifiers,
                                 kind: ::crossterm::event::KeyEventKind::Press,
                                 ..
-                            }
-                        ) => self.bar(),
+                            },
+                        ) if modifiers.contains(::crossterm::event::KeyModifiers::NONE) => self.bar(),
                         ::crossterm::event::Event::Key(
                             ::crossterm::event::KeyEvent {
-                                code: ::crossterm::event::KeyCode::Char('a'),
+                                code: KeyCode::Char('a'),
+                                modifiers,
                                 kind: ::crossterm::event::KeyEventKind::Press,
                                 ..
-                            }
-                        ) => self.baz(),
+                            },
+                        ) if modifiers
+                            .contains(
+                                ::crossterm::event::KeyModifiers::NONE
+                                    .union(KeyModifiers::CONTROL)
+                                    .union(KeyModifiers::SHIFT),
+                            ) => self.baz(),
                         _ => {}
                     }
                 }
@@ -315,14 +351,14 @@ mod tests {
         };
         let input = parse_quote! {
             impl Foo {
-                #[keybind(pressed=Key::Esc)]
-                #[keybind(pressed=Key::Char('q'))]
+                #[keybind(pressed(key=Key::Esc))]
+                #[keybind(pressed(key=Key::Char('q')))]
                 fn bar(&mut self) {
                     todo!()
                 }
 
                 /// The second keybind
-                #[keybind(pressed=Key::Char('a'))]
+                #[keybind(pressed(key=Key::Char('a')))]
                 fn baz(&mut self) {
                     todo!()
                 }
@@ -343,23 +379,25 @@ mod tests {
         })
         .unwrap();
         let expected_keymap = parse_quote! {
-            impl ::ratatui_input_manager::KeyMap::<::termion::event::Key, ::termion::event::Event> for Foo {
-                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::termion::event::Key>] = &[
-                    ::ratatui_input_manager::KeyBind::<::termion::event::Key> {
+            impl ::ratatui_input_manager::KeyMap::<::ratatui_input_manager::TermionBackend> for Foo {
+                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermionBackend>] = &[
+                    ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermionBackend> {
                         keys: &[Key::Esc, Key::Char('q')],
+                        modifiers: &[(), ()],
                         description: None,
                     },
-                    ::ratatui_input_manager::KeyBind::<::termion::event::Key> {
+                    ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermionBackend> {
                         keys: &[Key::Char('a')],
+                        modifiers: &[()],
                         description: Some("The second keybind"),
                     }
                 ];
 
-                fn handle(&mut self, event: &::termion::event::Event) {
+                fn handle(&mut self, event: &<::ratatui_input_manager::TermionBackend as ::ratatui_input_manager::Backend>::Event) {
                     match event {
                         ::termion::event::Event::Key(
                             ::termion::event::Key::Esc
-                        ) |
+                        ) => self.bar(),
                         ::termion::event::Event::Key(
                             ::termion::event::Key::Char('q')
                         ) => self.bar(),
@@ -386,14 +424,14 @@ mod tests {
         };
         let input = parse_quote! {
             impl Foo {
-                #[keybind(pressed=KeyCode::Escape)]
-                #[keybind(pressed=KeyCode::Char('q'))]
+                #[keybind(pressed(key=KeyCode::Escape))]
+                #[keybind(pressed(key=KeyCode::Char('q')))]
                 fn bar(&mut self) {
                     todo!()
                 }
 
                 /// The second keybind
-                #[keybind(pressed=KeyCode::Char('a'))]
+                #[keybind(pressed(key=KeyCode::Char('a'), modifiers=Modifiers::CTRL, modifiers=Modifiers::SHIFT))]
                 fn baz(&mut self) {
                     todo!()
                 }
@@ -414,38 +452,49 @@ mod tests {
         })
         .unwrap();
         let expected_keymap = parse_quote! {
-            impl ::ratatui_input_manager::KeyMap::<::termwiz::input::KeyCode, ::termwiz::input::InputEvent> for Foo {
-                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::termwiz::input::KeyCode>] = &[
-                    ::ratatui_input_manager::KeyBind::<::termwiz::input::KeyCode> {
+            impl ::ratatui_input_manager::KeyMap::<::ratatui_input_manager::TermwizBackend> for Foo {
+                const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermwizBackend>] = &[
+                    ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermwizBackend> {
                         keys: &[KeyCode::Escape, KeyCode::Char('q')],
+                        modifiers: &[::termwiz::input::Modifiers::NONE, ::termwiz::input::Modifiers::NONE],
                         description: None,
                     },
-                    ::ratatui_input_manager::KeyBind::<::termwiz::input::KeyCode> {
+                    ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermwizBackend> {
                         keys: &[KeyCode::Char('a')],
+                        modifiers: &[
+                            ::termwiz::input::Modifiers::NONE
+                                .union(Modifiers::CTRL)
+                                .union(Modifiers::SHIFT),
+                        ],
                         description: Some("The second keybind"),
                     }
                 ];
 
-                fn handle(&mut self, event: &::termwiz::input::InputEvent) {
+                fn handle(&mut self, event: &<::ratatui_input_manager::TermwizBackend as ::ratatui_input_manager::Backend>::Event) {
                     match event {
                         ::termwiz::input::InputEvent::Key(
                             ::termwiz::input::KeyEvent {
-                                key: ::termwiz::input::KeyCode::Escape,
-                                modifiers: ::termwiz::input::Modifiers::NONE,
-                            }
-                        ) |
+                                key: KeyCode::Escape,
+                                modifiers,
+                            },
+                        ) if modifiers.contains(::termwiz::input::Modifiers::NONE) => self.bar(),
                         ::termwiz::input::InputEvent::Key(
                             ::termwiz::input::KeyEvent {
-                                key: ::termwiz::input::KeyCode::Char('q'),
-                                modifiers: ::termwiz::input::Modifiers::NONE,
-                            }
-                        ) => self.bar(),
+                                key: KeyCode::Char('q'),
+                                modifiers,
+                            },
+                        ) if modifiers.contains(::termwiz::input::Modifiers::NONE) => self.bar(),
                         ::termwiz::input::InputEvent::Key(
                             ::termwiz::input::KeyEvent {
-                                key: ::termwiz::input::KeyCode::Char('a'),
-                                modifiers: ::termwiz::input::Modifiers::NONE,
-                            }
-                        ) => self.baz(),
+                                key: KeyCode::Char('a'),
+                                modifiers,
+                            },
+                        ) if modifiers
+                            .contains(
+                                ::termwiz::input::Modifiers::NONE
+                                    .union(Modifiers::CTRL)
+                                    .union(Modifiers::SHIFT),
+                            ) => self.baz(),
                         _ => {}
                     }
                 }

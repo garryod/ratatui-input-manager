@@ -1,14 +1,14 @@
 use crossterm::event::KeyCode;
 use ratatui_core::{buffer::Buffer, layout::Rect, widgets::Widget};
 use ratatui_input_manager::widgets::{Help, HelpBar};
-use ratatui_input_manager::{KeyMap, keymap};
+use ratatui_input_manager::{keymap, KeyMap};
 
 #[derive(Default)]
 struct App;
 
 #[keymap(backend = "crossterm")]
 impl App {
-    #[keybind(pressed = KeyCode::Char('q'))]
+    #[keybind(pressed(key=KeyCode::Char('q')))]
     fn quit(&mut self) {}
 }
 

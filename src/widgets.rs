@@ -1,4 +1,4 @@
-use crate::{KeyBind, VimlikeExt};
+use crate::{Backend, KeyBind, VimlikeExt};
 use itertools::Itertools;
 use ratatui_core::{
     buffer::Buffer,
@@ -23,7 +23,7 @@ use ratatui_widgets::{
 ///     style::{Color, Style},
 ///     terminal::Frame,
 /// };
-/// use ratatui_input_manager::{KeyMap, keymap};
+/// use ratatui_input_manager::{CrosstermBackend, KeyMap, keymap};
 /// use ratatui_input_manager::widgets::Help;
 /// use ratatui_widgets::block::Block;
 ///
@@ -32,29 +32,29 @@ use ratatui_widgets::{
 ///
 /// #[keymap(backend = "crossterm")]
 /// impl App {
-///     #[keybind(pressed = KeyCode::Char('q'))]
+///     #[keybind(pressed(key = KeyCode::Char('q')))]
 ///     fn quit(&mut self) {}
 /// }
 ///
 /// fn render_help(frame: &mut Frame) {
-///     let help = Help::new(App::KEYBINDS)
+///     let help = Help::<CrosstermBackend>::new(App::KEYBINDS)
 ///         .block(Block::default().title("Controls"))
 ///         .key_style(Style::default().fg(Color::Cyan));
 ///     frame.render_widget(help, frame.area());
 /// }
 /// ```
-pub struct Help<'k, E: 'static> {
-    keybinds: &'k [KeyBind<E>],
+pub struct Help<'k, B: Backend> {
+    keybinds: &'k [KeyBind<B>],
     block: Option<Block<'k>>,
     key_style: Style,
     description_style: Style,
 }
 
-impl<'k, E: 'static> Help<'k, E> {
+impl<'k, B: Backend> Help<'k, B> {
     /// Construct a [`Help`] [`Widget`] from a collection of [`KeyBind`]s, typically obtained by
     /// inspecting the metadata as [`crate::KeyMap::KEYBINDS`] or
     /// [`crate::DynKeyMap::keybinds`]
-    pub fn new(keybinds: &'k [KeyBind<E>]) -> Self {
+    pub fn new(keybinds: &'k [KeyBind<B>]) -> Self {
         Self {
             keybinds,
             block: None,
@@ -97,24 +97,31 @@ impl<'k, E: 'static> Help<'k, E> {
     }
 }
 
-impl<'k, E: 'static + VimlikeExt<'k>> Widget for Help<'k, E> {
+impl<'k, B: Backend> Widget for Help<'k, B>
+where
+    B::Key: VimlikeExt<'k>,
+{
     fn render(self, area: Rect, buf: &mut Buffer)
     where
         Self: Sized,
     {
         let table = Table::new(
-            self.keybinds.iter().map(|KeyBind { keys, description }| {
-                Row::new([
-                    Cell::new(
-                        keys.iter()
-                            .map(|key| key.as_vimlike())
-                            .format(", ")
-                            .to_string(),
-                    )
-                    .style(self.key_style),
-                    Cell::new(description.unwrap_or_default()).style(self.description_style),
-                ])
-            }),
+            self.keybinds.iter().map(
+                |KeyBind {
+                     keys, description, ..
+                 }| {
+                    Row::new([
+                        Cell::new(
+                            keys.iter()
+                                .map(|key| key.as_vimlike())
+                                .format(", ")
+                                .to_string(),
+                        )
+                        .style(self.key_style),
+                        Cell::new(description.unwrap_or_default()).style(self.description_style),
+                    ])
+                },
+            ),
             [Constraint::Min(8), Constraint::Fill(1)],
         );
         let area = match self.block {
@@ -138,7 +145,7 @@ impl<'k, E: 'static + VimlikeExt<'k>> Widget for Help<'k, E> {
 ///     style::{Color, Style},
 ///     terminal::Frame,
 /// };
-/// use ratatui_input_manager::{KeyMap, keymap};
+/// use ratatui_input_manager::{CrosstermBackend, KeyMap, keymap};
 /// use ratatui_input_manager::widgets::HelpBar;
 ///
 /// #[derive(Default)]
@@ -146,29 +153,29 @@ impl<'k, E: 'static + VimlikeExt<'k>> Widget for Help<'k, E> {
 ///
 /// #[keymap(backend = "crossterm")]
 /// impl App {
-///     #[keybind(pressed = KeyCode::Char('q'))]
+///     #[keybind(pressed(key = KeyCode::Char('q')))]
 ///     fn quit(&mut self) {}
 /// }
 ///
 /// fn render_help_bar(frame: &mut Frame) {
-///     let help = HelpBar::new(App::KEYBINDS)
+///     let help = HelpBar::<CrosstermBackend>::new(App::KEYBINDS)
 ///         .key_style(Style::default().fg(Color::Cyan))
 ///         .separator_style(Style::default().fg(Color::DarkGray));
 ///     frame.render_widget(help, frame.area());
 /// }
 /// ```
-pub struct HelpBar<'k, E: 'static> {
-    keybinds: &'k [KeyBind<E>],
+pub struct HelpBar<'k, B: Backend> {
+    keybinds: &'k [KeyBind<B>],
     key_style: Style,
     description_style: Style,
     separator_style: Style,
 }
 
-impl<'k, E: 'static> HelpBar<'k, E> {
+impl<'k, B: Backend> HelpBar<'k, B> {
     /// Construct a [`HelpBar`] [`Widget`] from a collection of [`KeyBind`]s, typically obtained by
     /// inspecting the metadata as [`crate::KeyMap::KEYBINDS`] or
     /// [`crate::DynKeyMap::keybinds`]
-    pub fn new(keybinds: &'k [KeyBind<E>]) -> Self {
+    pub fn new(keybinds: &'k [KeyBind<B>]) -> Self {
         Self {
             keybinds,
             key_style: Style::default(),
@@ -214,10 +221,18 @@ impl<'k, E: 'static> HelpBar<'k, E> {
     }
 }
 
-impl<'k, E: 'static + VimlikeExt<'k>> Widget for HelpBar<'k, E> {
+impl<'k, B: Backend> Widget for HelpBar<'k, B>
+where
+    B::Key: VimlikeExt<'k>,
+{
     fn render(self, area: Rect, buf: &mut Buffer) {
         Line::from_iter(self.keybinds.iter().enumerate().flat_map(
-            |(idx, KeyBind { keys, description })| {
+            |(
+                idx,
+                KeyBind {
+                    keys, description, ..
+                },
+            )| {
                 [
                     Span::styled(if idx == 0 { "" } else { " | " }, self.separator_style),
                     Span::styled(

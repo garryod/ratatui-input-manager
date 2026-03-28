@@ -5,20 +5,20 @@ use termwiz::input::{InputEvent, KeyCode, KeyEvent, Modifiers};
 #[derive(Debug, Default, PartialEq, Eq)]
 struct TestKeyMap {
     exit: bool,
-    a: bool,
+    ctrl_shift_a: bool,
 }
 
 #[keymap(backend = "termwiz")]
 impl TestKeyMap {
-    #[keybind(pressed = KeyCode::Escape)]
-    #[keybind(pressed = KeyCode::Char('q'))]
+    #[keybind(pressed(key=KeyCode::Escape))]
+    #[keybind(pressed(key=KeyCode::Char('q')))]
     fn handle_esc(&mut self) {
         self.exit = true;
     }
 
-    #[keybind(pressed = KeyCode::Char('a'))]
-    fn handle_a(&mut self) {
-        self.a = true
+    #[keybind(pressed(key=KeyCode::Char('a'), modifiers=Modifiers::CTRL, modifiers=Modifiers::SHIFT))]
+    fn handle_ctrl_shift_a(&mut self) {
+        self.ctrl_shift_a = true;
     }
 }
 
@@ -61,18 +61,18 @@ fn test_handle_q() {
 }
 
 #[test]
-fn test_handle_a() {
+fn test_handle_ctrl_shift_a() {
     let mut map = TestKeyMap::default();
 
     let event = InputEvent::Key(KeyEvent {
         key: KeyCode::Char('a'),
-        modifiers: Modifiers::NONE,
+        modifiers: Modifiers::CTRL | Modifiers::SHIFT,
     });
     map.handle(&event);
 
     assert_eq!(
         TestKeyMap {
-            a: true,
+            ctrl_shift_a: true,
             ..Default::default()
         },
         map
@@ -86,5 +86,13 @@ fn test_keybinds() {
         TestKeyMap::KEYBINDS[0].keys,
         &[KeyCode::Escape, KeyCode::Char('q')]
     );
+    assert_eq!(
+        TestKeyMap::KEYBINDS[0].modifiers,
+        &[Modifiers::NONE, Modifiers::NONE]
+    );
     assert_eq!(TestKeyMap::KEYBINDS[1].keys, &[KeyCode::Char('a')]);
+    assert_eq!(
+        TestKeyMap::KEYBINDS[1].modifiers,
+        &[Modifiers::CTRL | Modifiers::SHIFT]
+    );
 }
