@@ -9,37 +9,82 @@ pub mod widgets;
 pub use ratatui_input_manager_derive::keymap;
 use std::fmt::Display;
 
+/// A backend that provides types for key events
+pub trait Backend {
+    /// The key type used by this backend
+    type Key: 'static;
+    /// The modifier type used by this backend
+    type Modifier: 'static;
+    /// The event type used by this backend
+    type Event;
+}
+
+/// Backend for crossterm
+#[cfg(feature = "crossterm")]
+pub struct CrosstermBackend;
+
+#[cfg(feature = "crossterm")]
+impl Backend for CrosstermBackend {
+    type Key = crossterm::event::KeyCode;
+    type Modifier = crossterm::event::KeyModifiers;
+    type Event = crossterm::event::Event;
+}
+
+/// Backend for termion
+#[cfg(feature = "termion")]
+pub struct TermionBackend;
+
+#[cfg(feature = "termion")]
+impl Backend for TermionBackend {
+    type Key = termion::event::Key;
+    type Modifier = ();
+    type Event = termion::event::Event;
+}
+
+#[cfg(feature = "termwiz")]
+/// Backend for termwiz
+pub struct TermwizBackend;
+
+#[cfg(feature = "termwiz")]
+impl Backend for TermwizBackend {
+    type Key = termwiz::input::KeyCode;
+    type Modifier = termwiz::input::Modifiers;
+    type Event = termwiz::input::InputEvent;
+}
+
 /// Key binding metadata, including the handled key presses and a description of behaviour
-pub struct KeyBind<K: 'static> {
+pub struct KeyBind<B: Backend> {
     /// The keys which is handled by this binding
-    pub keys: &'static [K],
+    pub keys: &'static [B::Key],
+    /// The modifiers which must be pressed for this binding
+    pub modifiers: &'static [B::Modifier],
     /// A brief description of the expected behaviour
     pub description: Option<&'static str>,
 }
 
 /// A mapping between keybinds and methods on the type which mutate the state
-pub trait KeyMap<K: 'static, E> {
+pub trait KeyMap<B: Backend + 'static> {
     /// Metadata about the key presses which are handled
-    const KEYBINDS: &'static [KeyBind<K>];
+    const KEYBINDS: &'static [KeyBind<B>];
 
     /// Handle an event by calling the appropriate handler method
-    fn handle(&mut self, event: &E);
+    fn handle(&mut self, event: &B::Event);
 }
 
 /// A dyn compatible equivalent to [`KeyMap`]
 #[expect(missing_docs)]
-pub trait DynKeyMap<K: 'static, E> {
-    fn keybinds(&self) -> &'static [KeyBind<K>];
+pub trait DynKeyMap<B: Backend + 'static> {
+    fn keybinds(&self) -> &'static [KeyBind<B>];
 
-    fn handle(&mut self, event: &E);
+    fn handle(&mut self, event: &B::Event);
 }
 
-impl<K: 'static, E, T: KeyMap<K, E>> DynKeyMap<K, E> for T {
-    fn keybinds(&self) -> &'static [KeyBind<K>] {
+impl<B: Backend + 'static, T: KeyMap<B>> DynKeyMap<B> for T {
+    fn keybinds(&self) -> &'static [KeyBind<B>] {
         T::KEYBINDS
     }
 
-    fn handle(&mut self, event: &E) {
+    fn handle(&mut self, event: &B::Event) {
         self.handle(event)
     }
 }

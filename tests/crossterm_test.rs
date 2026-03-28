@@ -1,24 +1,24 @@
 #![cfg(feature = "crossterm")]
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-use ratatui_input_manager::{KeyMap, keymap};
+use ratatui_input_manager::{keymap, KeyMap};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct TestKeyMap {
     exit: bool,
-    a: bool,
+    ctrl_shift_a: bool,
 }
 
 #[keymap(backend = "crossterm")]
 impl TestKeyMap {
-    #[keybind(pressed = KeyCode::Esc)]
-    #[keybind(pressed = KeyCode::Char('q'))]
+    #[keybind(pressed(key=KeyCode::Esc))]
+    #[keybind(pressed(key=KeyCode::Char('q')))]
     fn handle_esc(&mut self) {
         self.exit = true;
     }
 
-    #[keybind(pressed = KeyCode::Char('a'))]
-    fn handle_a(&mut self) {
-        self.a = true
+    #[keybind(pressed(key=KeyCode::Char('a'), modifiers=KeyModifiers::CONTROL, modifiers=KeyModifiers::SHIFT))]
+    fn handle_ctrl_shift_a(&mut self) {
+        self.ctrl_shift_a = true;
     }
 }
 
@@ -55,20 +55,24 @@ fn test_handle_q() {
 }
 
 #[test]
-fn test_handle_a() {
+fn test_handle_ctrl_shift_a() {
     let mut map = TestKeyMap::default();
 
-    let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+    let event = Event::Key(KeyEvent::new(
+        KeyCode::Char('a'),
+        KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+    ));
     map.handle(&event);
 
     assert_eq!(
         TestKeyMap {
-            a: true,
+            ctrl_shift_a: true,
             ..Default::default()
         },
         map
     );
 }
+
 #[test]
 fn test_keybinds() {
     assert_eq!(TestKeyMap::KEYBINDS.len(), 2);
@@ -76,5 +80,13 @@ fn test_keybinds() {
         TestKeyMap::KEYBINDS[0].keys,
         &[KeyCode::Esc, KeyCode::Char('q')]
     );
+    assert_eq!(
+        TestKeyMap::KEYBINDS[0].modifiers,
+        &[KeyModifiers::NONE, KeyModifiers::NONE]
+    );
     assert_eq!(TestKeyMap::KEYBINDS[1].keys, &[KeyCode::Char('a')]);
+    assert_eq!(
+        TestKeyMap::KEYBINDS[1].modifiers,
+        &[KeyModifiers::CONTROL | KeyModifiers::SHIFT]
+    );
 }

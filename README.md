@@ -43,20 +43,21 @@ struct App {
 #[keymap(backend = "crossterm")]
 impl App {
     /// Increment the counter
-    #[keybind(pressed = KeyCode::Char('+'))]
+    #[keybind(pressed(key=KeyCode::Char('+')))]
     fn increment(&mut self) {
         self.counter += 1;
     }
 
     /// Decrement the counter
-    #[keybind(pressed = KeyCode::Char('-'))]
+    #[keybind(pressed(key=KeyCode::Char('-')))]
     fn decrement(&mut self) {
         self.counter -= 1;
     }
 
     /// Exit the application
-    #[keybind(pressed = KeyCode::Esc)]
-    #[keybind(pressed = KeyCode::Char('q'))]
+    #[keybind(pressed(key=KeyCode::Esc))]
+    #[keybind(pressed(key=KeyCode::Char('q')))]
+    #[keybind(pressed(key=KeyCode::Char('c'), modifiers=KeyModifiers::CONTROL))]
     fn quit(&mut self) {
         self.quit = true
     }
