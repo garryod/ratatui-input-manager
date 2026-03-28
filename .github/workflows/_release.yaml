@@ -1,9 +1,10 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - '**'
+  workflow_call:
+    secrets:
+      CARGO_REGISTRY_TOKEN:
+        required: true
 
 jobs:
   release-plz:
