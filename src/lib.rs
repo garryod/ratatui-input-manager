@@ -14,7 +14,7 @@ pub trait Backend {
     /// The key type used by this backend
     type Key: 'static;
     /// The modifier type used by this backend
-    type Modifier: 'static;
+    type Modifiers: 'static;
     /// The event type used by this backend
     type Event;
 }
@@ -26,7 +26,7 @@ pub struct CrosstermBackend;
 #[cfg(feature = "crossterm")]
 impl Backend for CrosstermBackend {
     type Key = crossterm::event::KeyCode;
-    type Modifier = crossterm::event::KeyModifiers;
+    type Modifiers = crossterm::event::KeyModifiers;
     type Event = crossterm::event::Event;
 }
 
@@ -37,29 +37,19 @@ pub struct TermionBackend;
 #[cfg(feature = "termion")]
 impl Backend for TermionBackend {
     type Key = termion::event::Key;
-    type Modifier = ();
+    type Modifiers = ();
     type Event = termion::event::Event;
 }
 
-#[cfg(feature = "termwiz")]
 /// Backend for termwiz
+#[cfg(feature = "termwiz")]
 pub struct TermwizBackend;
 
 #[cfg(feature = "termwiz")]
 impl Backend for TermwizBackend {
     type Key = termwiz::input::KeyCode;
-    type Modifier = termwiz::input::Modifiers;
+    type Modifiers = termwiz::input::Modifiers;
     type Event = termwiz::input::InputEvent;
-}
-
-/// Key binding metadata, including the handled key presses and a description of behaviour
-pub struct KeyBind<B: Backend> {
-    /// The keys which is handled by this binding
-    pub keys: &'static [B::Key],
-    /// The modifiers which must be pressed for this binding
-    pub modifiers: &'static [B::Modifier],
-    /// A brief description of the expected behaviour
-    pub description: Option<&'static str>,
 }
 
 /// A mapping between keybinds and methods on the type which mutate the state
@@ -89,29 +79,26 @@ impl<B: Backend + 'static, T: KeyMap<B>> DynKeyMap<B> for T {
     }
 }
 
-struct Vimlike<'k, K>(&'k K);
-
-/// Provides a mechanism for [`Display`]ing key press like types in a manner similar to key press
-/// hints in vim.
-pub trait VimlikeExt<'k>: Sized {
-    /// Convert this type to one which implements [`Display`] in a manner similar to key press
-    /// hints in vim.
-    fn as_vimlike(&'k self) -> impl Display + 'k;
+/// Key binding metadata, including the handled key presses and a description of behaviour
+pub struct KeyBind<B: Backend + 'static> {
+    /// The key press event handlded by this binding
+    pub pressed: &'static [KeyPress<B>],
+    /// A brief description of the expected behaviour
+    pub description: Option<&'static str>,
 }
 
-impl<'k, K: 'k> VimlikeExt<'k> for K
-where
-    Vimlike<'k, K>: Display,
-{
-    fn as_vimlike(&'k self) -> impl Display {
-        Vimlike(self)
-    }
+/// A key press event, combining a key code with modifiers
+pub struct KeyPress<B: Backend> {
+    /// The keys which is pressed
+    pub key: B::Key,
+    /// The modifiers which are activated during the key press
+    pub modifiers: B::Modifiers,
 }
 
 #[cfg(feature = "crossterm")]
-impl<'k> Display for Vimlike<'k, crossterm::event::KeyCode> {
+impl Display for KeyPress<CrosstermBackend> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.0 {
+        match self.key {
             crossterm::event::KeyCode::Backspace => write!(f, "<BS>"),
             crossterm::event::KeyCode::Enter => write!(f, "<CR>"),
             crossterm::event::KeyCode::Left => write!(f, "<Left>"),
@@ -176,10 +163,20 @@ impl<'k> Display for Vimlike<'k, crossterm::event::KeyCode> {
     }
 }
 
-#[cfg(feature = "termion")]
-impl<'k> Display for Vimlike<'k, termion::event::Key> {
+#[cfg(feature = "crossterm")]
+impl std::fmt::Debug for KeyPress<CrosstermBackend> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.0 {
+        f.debug_struct("KeyPress")
+            .field("key", &self.key)
+            .field("modifiers", &self.modifiers)
+            .finish()
+    }
+}
+
+#[cfg(feature = "termion")]
+impl Display for KeyPress<TermionBackend> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.key {
             termion::event::Key::Backspace => write!(f, "<BS>"),
             termion::event::Key::Left => write!(f, "<Left>"),
             termion::event::Key::ShiftLeft => write!(f, "<S-Left>"),
@@ -217,10 +214,20 @@ impl<'k> Display for Vimlike<'k, termion::event::Key> {
     }
 }
 
-#[cfg(feature = "termwiz")]
-impl<'k> Display for Vimlike<'k, termwiz::input::KeyCode> {
+#[cfg(feature = "termion")]
+impl std::fmt::Debug for KeyPress<TermionBackend> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.0 {
+        f.debug_struct("KeyPress")
+            .field("key", &self.key)
+            .field("modifiers", &self.modifiers)
+            .finish()
+    }
+}
+
+#[cfg(feature = "termwiz")]
+impl Display for KeyPress<TermwizBackend> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.key {
             termwiz::input::KeyCode::Char(c) => write!(f, "{c}"),
             termwiz::input::KeyCode::Hyper => write!(f, "<Hyper>"),
             termwiz::input::KeyCode::Super => write!(f, "<Super>"),

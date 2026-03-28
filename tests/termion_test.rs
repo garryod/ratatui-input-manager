@@ -1,5 +1,5 @@
 #![cfg(feature = "termion")]
-use ratatui_input_manager::{keymap, KeyMap};
+use ratatui_input_manager::{KeyMap, keymap};
 use termion::event::{Event, Key};
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -73,8 +73,12 @@ fn test_handle_a() {
 #[test]
 fn test_keybinds() {
     assert_eq!(TestKeyMap::KEYBINDS.len(), 2);
-    assert_eq!(TestKeyMap::KEYBINDS[0].keys, &[Key::Esc, Key::Char('q')]);
-    assert_eq!(TestKeyMap::KEYBINDS[0].modifiers, &[(), ()]);
-    assert_eq!(TestKeyMap::KEYBINDS[1].keys, &[Key::Char('a')]);
-    assert_eq!(TestKeyMap::KEYBINDS[1].modifiers, &[()]);
+    assert_eq!(TestKeyMap::KEYBINDS[0].pressed.len(), 2);
+    assert_eq!(TestKeyMap::KEYBINDS[0].pressed[0].key, Key::Esc);
+    assert_eq!(TestKeyMap::KEYBINDS[0].pressed[0].modifiers, ());
+    assert_eq!(TestKeyMap::KEYBINDS[0].pressed[1].key, Key::Char('q'));
+    assert_eq!(TestKeyMap::KEYBINDS[0].pressed[1].modifiers, ());
+    assert_eq!(TestKeyMap::KEYBINDS[1].pressed.len(), 1);
+    assert_eq!(TestKeyMap::KEYBINDS[1].pressed[0].key, Key::Char('a'));
+    assert_eq!(TestKeyMap::KEYBINDS[1].pressed[0].modifiers, ());
 }
