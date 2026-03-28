@@ -80,6 +80,25 @@ fn test_handle_ctrl_shift_a() {
 }
 
 #[test]
+fn test_ignores_a() {
+    let mut map = TestKeyMap::default();
+
+    let event = InputEvent::Key(KeyEvent {
+        key: KeyCode::Char('a'),
+        modifiers: Modifiers::NONE,
+    });
+    map.handle(&event);
+
+    assert_eq!(
+        TestKeyMap {
+            ctrl_shift_a: false,
+            ..Default::default()
+        },
+        map
+    );
+}
+
+#[test]
 fn test_keybinds() {
     assert_eq!(TestKeyMap::KEYBINDS.len(), 2);
     assert_eq!(
