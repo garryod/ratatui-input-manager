@@ -1,4 +1,4 @@
-use crate::{Backend, KeyBind, VimlikeExt};
+use crate::{Backend, KeyBind, KeyPress};
 use itertools::Itertools;
 use ratatui_core::{
     buffer::Buffer,
@@ -43,7 +43,7 @@ use ratatui_widgets::{
 ///     frame.render_widget(help, frame.area());
 /// }
 /// ```
-pub struct Help<'k, B: Backend> {
+pub struct Help<'k, B: Backend + 'static> {
     keybinds: &'k [KeyBind<B>],
     block: Option<Block<'k>>,
     key_style: Style,
@@ -97,9 +97,9 @@ impl<'k, B: Backend> Help<'k, B> {
     }
 }
 
-impl<'k, B: Backend> Widget for Help<'k, B>
+impl<'k, B: Backend + 'static> Widget for Help<'k, B>
 where
-    B::Key: VimlikeExt<'k>,
+    KeyPress<B>: std::fmt::Display,
 {
     fn render(self, area: Rect, buf: &mut Buffer)
     where
@@ -108,12 +108,15 @@ where
         let table = Table::new(
             self.keybinds.iter().map(
                 |KeyBind {
-                     keys, description, ..
+                     pressed,
+                     description,
+                     ..
                  }| {
                     Row::new([
                         Cell::new(
-                            keys.iter()
-                                .map(|key| key.as_vimlike())
+                            pressed
+                                .iter()
+                                .map(|key| key.to_string())
                                 .format(", ")
                                 .to_string(),
                         )
@@ -164,7 +167,7 @@ where
 ///     frame.render_widget(help, frame.area());
 /// }
 /// ```
-pub struct HelpBar<'k, B: Backend> {
+pub struct HelpBar<'k, B: Backend + 'static> {
     keybinds: &'k [KeyBind<B>],
     key_style: Style,
     description_style: Style,
@@ -221,16 +224,18 @@ impl<'k, B: Backend> HelpBar<'k, B> {
     }
 }
 
-impl<'k, B: Backend> Widget for HelpBar<'k, B>
+impl<'k, B: Backend + 'static> Widget for HelpBar<'k, B>
 where
-    B::Key: VimlikeExt<'k>,
+    KeyPress<B>: std::fmt::Display,
 {
     fn render(self, area: Rect, buf: &mut Buffer) {
         Line::from_iter(self.keybinds.iter().enumerate().flat_map(
             |(
                 idx,
                 KeyBind {
-                    keys, description, ..
+                    pressed,
+                    description,
+                    ..
                 },
             )| {
                 [
@@ -240,8 +245,9 @@ where
                         self.description_style,
                     ),
                     Span::styled(
-                        keys.iter()
-                            .map(|key| key.as_vimlike())
+                        pressed
+                            .iter()
+                            .map(|press| press.to_string())
                             .format(", ")
                             .to_string(),
                         self.key_style,

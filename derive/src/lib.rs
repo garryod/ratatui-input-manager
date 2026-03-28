@@ -208,8 +208,12 @@ fn keymap_impl(args: KeyMapAttrs, input: ItemImpl) -> syn::Result<(ItemImpl, Ite
             const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<#backend_type>] = &[
                 #(
                     ::ratatui_input_manager::KeyBind::<#backend_type> {
-                        keys: &[#(#key_codes),*],
-                        modifiers: &[#(#combined_modifiers),*],
+                        pressed: &[
+                            #(::ratatui_input_manager::KeyPress::<#backend_type> {
+                                key: #key_codes,
+                                modifiers: #combined_modifiers,
+                            }),*
+                        ],
                         description: #descriptions,
                     },
                 )*
@@ -285,16 +289,26 @@ mod tests {
             impl ::ratatui_input_manager::KeyMap::<::ratatui_input_manager::CrosstermBackend> for Foo {
                 const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::ratatui_input_manager::CrosstermBackend>] = &[
                     ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::CrosstermBackend> {
-                        keys: &[KeyCode::Esc, KeyCode::Char('q')],
-                        modifiers: &[::crossterm::event::KeyModifiers::NONE, ::crossterm::event::KeyModifiers::NONE],
+                        pressed: &[
+                            ::ratatui_input_manager::KeyPress::<::ratatui_input_manager::CrosstermBackend> {
+                                key: KeyCode::Esc,
+                                modifiers: ::crossterm::event::KeyModifiers::NONE,
+                            },
+                            ::ratatui_input_manager::KeyPress::<::ratatui_input_manager::CrosstermBackend> {
+                                key: KeyCode::Char('q'),
+                                modifiers: ::crossterm::event::KeyModifiers::NONE,
+                            },
+                        ],
                         description: None,
                     },
                     ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::CrosstermBackend> {
-                        keys: &[KeyCode::Char('a')],
-                        modifiers: &[
-                            ::crossterm::event::KeyModifiers::NONE
-                                .union(KeyModifiers::CONTROL)
-                                .union(KeyModifiers::SHIFT),
+                        pressed: &[
+                            ::ratatui_input_manager::KeyPress::<::ratatui_input_manager::CrosstermBackend> {
+                                key: KeyCode::Char('a'),
+                                modifiers: ::crossterm::event::KeyModifiers::NONE
+                                    .union(KeyModifiers::CONTROL)
+                                    .union(KeyModifiers::SHIFT),
+                            },
                         ],
                         description: Some("The second keybind"),
                     }
@@ -382,13 +396,25 @@ mod tests {
             impl ::ratatui_input_manager::KeyMap::<::ratatui_input_manager::TermionBackend> for Foo {
                 const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermionBackend>] = &[
                     ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermionBackend> {
-                        keys: &[Key::Esc, Key::Char('q')],
-                        modifiers: &[(), ()],
+                        pressed: &[
+                            ::ratatui_input_manager::KeyPress::<::ratatui_input_manager::TermionBackend> {
+                                key: Key::Esc,
+                                modifiers: (),
+                            },
+                            ::ratatui_input_manager::KeyPress::<::ratatui_input_manager::TermionBackend> {
+                                key: Key::Char('q'),
+                                modifiers: (),
+                            },
+                        ],
                         description: None,
                     },
                     ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermionBackend> {
-                        keys: &[Key::Char('a')],
-                        modifiers: &[()],
+                        pressed: &[
+                            ::ratatui_input_manager::KeyPress::<::ratatui_input_manager::TermionBackend> {
+                                key: Key::Char('a'),
+                                modifiers: (),
+                            },
+                        ],
                         description: Some("The second keybind"),
                     }
                 ];
@@ -455,16 +481,26 @@ mod tests {
             impl ::ratatui_input_manager::KeyMap::<::ratatui_input_manager::TermwizBackend> for Foo {
                 const KEYBINDS: &'static [::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermwizBackend>] = &[
                     ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermwizBackend> {
-                        keys: &[KeyCode::Escape, KeyCode::Char('q')],
-                        modifiers: &[::termwiz::input::Modifiers::NONE, ::termwiz::input::Modifiers::NONE],
+                        pressed: &[
+                            ::ratatui_input_manager::KeyPress::<::ratatui_input_manager::TermwizBackend> {
+                                key: KeyCode::Escape,
+                                modifiers: ::termwiz::input::Modifiers::NONE,
+                            },
+                            ::ratatui_input_manager::KeyPress::<::ratatui_input_manager::TermwizBackend> {
+                                key: KeyCode::Char('q'),
+                                modifiers: ::termwiz::input::Modifiers::NONE,
+                            },
+                        ],
                         description: None,
                     },
                     ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermwizBackend> {
-                        keys: &[KeyCode::Char('a')],
-                        modifiers: &[
-                            ::termwiz::input::Modifiers::NONE
-                                .union(Modifiers::CTRL)
-                                .union(Modifiers::SHIFT),
+                        pressed: &[
+                            ::ratatui_input_manager::KeyPress::<::ratatui_input_manager::TermwizBackend> {
+                                key: KeyCode::Char('a'),
+                                modifiers: ::termwiz::input::Modifiers::NONE
+                                    .union(Modifiers::CTRL)
+                                    .union(Modifiers::SHIFT),
+                            },
                         ],
                         description: Some("The second keybind"),
                     }

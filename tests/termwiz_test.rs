@@ -101,17 +101,21 @@ fn test_ignores_a() {
 #[test]
 fn test_keybinds() {
     assert_eq!(TestKeyMap::KEYBINDS.len(), 2);
+    assert_eq!(TestKeyMap::KEYBINDS[0].pressed.len(), 2);
+    assert_eq!(TestKeyMap::KEYBINDS[0].pressed[0].key, KeyCode::Escape,);
+    assert_eq!(TestKeyMap::KEYBINDS[0].pressed[1].key, KeyCode::Char('q'),);
     assert_eq!(
-        TestKeyMap::KEYBINDS[0].keys,
-        &[KeyCode::Escape, KeyCode::Char('q')]
+        TestKeyMap::KEYBINDS[0].pressed[0].modifiers,
+        Modifiers::NONE
     );
     assert_eq!(
-        TestKeyMap::KEYBINDS[0].modifiers,
-        &[Modifiers::NONE, Modifiers::NONE]
+        TestKeyMap::KEYBINDS[0].pressed[1].modifiers,
+        Modifiers::NONE
     );
-    assert_eq!(TestKeyMap::KEYBINDS[1].keys, &[KeyCode::Char('a')]);
+    assert_eq!(TestKeyMap::KEYBINDS[1].pressed.len(), 1);
+    assert_eq!(TestKeyMap::KEYBINDS[1].pressed[0].key, KeyCode::Char('a'));
     assert_eq!(
-        TestKeyMap::KEYBINDS[1].modifiers,
-        &[Modifiers::CTRL | Modifiers::SHIFT]
+        TestKeyMap::KEYBINDS[1].pressed[0].modifiers,
+        Modifiers::CTRL | Modifiers::SHIFT
     );
 }
