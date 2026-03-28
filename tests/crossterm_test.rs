@@ -1,6 +1,6 @@
 #![cfg(feature = "crossterm")]
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-use ratatui_input_manager::{keymap, KeyMap};
+use ratatui_input_manager::{KeyMap, keymap};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct TestKeyMap {
@@ -67,6 +67,22 @@ fn test_handle_ctrl_shift_a() {
     assert_eq!(
         TestKeyMap {
             ctrl_shift_a: true,
+            ..Default::default()
+        },
+        map
+    );
+}
+
+#[test]
+fn test_ignores_a() {
+    let mut map = TestKeyMap::default();
+
+    let event = Event::Key(KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE));
+    map.handle(&event);
+
+    assert_eq!(
+        TestKeyMap {
+            ctrl_shift_a: false,
             ..Default::default()
         },
         map
