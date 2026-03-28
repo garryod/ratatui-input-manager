@@ -1,6 +1,9 @@
 [package]
 name = "ratatui-input-manager"
 version = "0.1.0"
+description = "A small utility crate providing a declarative approach to handling inputs in ratatui"
+readme = "./README.md"
+keywords = ["tui", "ratatui", "crossterm", "termion", "termwiz"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
 

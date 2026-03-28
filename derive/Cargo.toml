@@ -1,6 +1,9 @@
 [package]
 name = "ratatui-input-manager-derive"
 version = "0.1.0"
+description = "macros for ratatui-input-manager"
+readme = "../README.md"
+keywords = ["tui", "ratatui", "crossterm", "termion", "termwiz"]
 edition = "2024"
 license = "MIT OR Apache-2.0"
 
