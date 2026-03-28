@@ -896,7 +896,7 @@ dependencies = [
 
 [[package]]
 name = "ratatui-input-manager"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "crossterm",
  "itertools",
@@ -909,7 +909,7 @@ dependencies = [
 
 [[package]]
 name = "ratatui-input-manager-derive"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "darling",
  "itertools",
