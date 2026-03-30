@@ -2,10 +2,9 @@ use crate::{Backend, KeyBind, KeyPress};
 use itertools::Itertools;
 use ratatui_core::{
     buffer::Buffer,
-    layout::Constraint,
-    layout::Rect,
+    layout::{Constraint, HorizontalAlignment, Rect},
     style::Style,
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::Widget,
 };
 use ratatui_widgets::{
@@ -116,6 +115,17 @@ where
     where
         Self: Sized,
     {
+        let max_key_width = self
+            .keybinds
+            .iter()
+            .map(|kb| {
+                let key_lens: Vec<usize> = kb.pressed.iter().map(|p| p.to_string().len()).collect();
+                key_lens.iter().sum::<usize>() + key_lens.len().saturating_sub(1) * 2
+            })
+            .max()
+            .unwrap_or_default()
+            .max(3) as u16;
+
         let table = Table::new(
             self.keybinds.iter().map(
                 |KeyBind {
@@ -123,20 +133,20 @@ where
                      description,
                      ..
                  }| {
+                    let key_str = pressed
+                        .iter()
+                        .map(|key| key.to_string())
+                        .format(", ")
+                        .to_string();
+                    let mut text = Text::from(key_str);
+                    text.alignment = Some(HorizontalAlignment::Right);
                     Row::new([
-                        Cell::new(
-                            pressed
-                                .iter()
-                                .map(|key| key.to_string())
-                                .format(", ")
-                                .to_string(),
-                        )
-                        .style(self.key_style),
+                        Cell::new(text).style(self.key_style),
                         Cell::new(description.unwrap_or_default()).style(self.description_style),
                     ])
                 },
             ),
-            [Constraint::Min(8), Constraint::Fill(1)],
+            [Constraint::Length(max_key_width), Constraint::Fill(1)],
         )
         .style(self.style);
         let area = match self.block {
