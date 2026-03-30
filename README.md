@@ -2,8 +2,8 @@
 
 <div align="center">
 
-![Crate Badge] ![Repo Badge] ![Docs Badge]   \
-![License Badge] ![CI Badge] ![Deps Badge]
+[![Crate Badge][Crate]] [![Repo Badge][Repo]] [![Docs Badge][Docs]]   \
+![License Badge] [![CI Badge][CI]] [![Deps Badge][Deps]]
 
 </div>
 
@@ -158,6 +158,12 @@ Increment the counter: <+> | Decrement the counter: <->
 This project is licensed under the MIT license and the Apache License (Version 2.0). See [LICENSE-MIT](./LICENSE-MIT) and [LICENSE-APACHE](./LICENSE-APACHE) for details.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+
+[Crate]: https://crates.io/crates/ratatui-input-manager
+[Repo]: https://github.com/garryod/ratatui-input-manager
+[Docs]: https://docs.rs/ratatui-input-manager
+[CI]: https://github.com/garryod/ratatui-input-manager/actions/workflows/ci.yaml
+[Deps]: https://deps.rs/repo/github/garryod/ratatui-input-manager
 
 [Crate Badge]: https://img.shields.io/crates/v/ratatui-input-manager?logo=rust&style=flat-square&color=E05D44
 [Repo Badge]: https://img.shields.io/badge/repo-garryod/ratatui--input--manaer-1370D3?style=flat-square&logo=github
