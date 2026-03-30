@@ -21,16 +21,7 @@ ratatui-input-manager = { version = "0.1.0", features = ["crossterm", "widgets"]
 ```rust
 use std::io;
 
-use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
-    terminal::{
-        enable_raw_mode,
-        disable_raw_mode,
-        EnterAlternateScreen,
-        LeaveAlternateScreen,
-    },
-    ExecutableCommand,
-};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use ratatui_core::{
     backend::TestBackend,
     layout::{Constraint, Layout},
