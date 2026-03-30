@@ -12,7 +12,8 @@ use ratatui_widgets::{
     table::{Cell, Row, Table},
 };
 
-/// A [`Widget`] displaying a table of bound keys and their description
+/// A [`ratatui_core::widgets::Widget`] displaying a table of bound keys and
+/// their description
 ///
 /// # Example
 ///
@@ -84,9 +85,6 @@ impl<'k, B: Backend> Help<'k, B> {
 
     /// Sets the style of the key code text
     ///
-    /// `style` accepts any type that is convertible to [`Style`] (e.g. [`Style`], [`Color`], or
-    /// your own type that implements [`Into<Style>`]).
-    ///
     /// This is a fluent setter method which must be chained or used as it consumes self
     #[must_use = "method moves the value of self and returns the modified value"]
     pub fn key_style(mut self, style: Style) -> Self {
@@ -95,9 +93,6 @@ impl<'k, B: Backend> Help<'k, B> {
     }
 
     /// Sets the style of the description text
-    ///
-    /// `style` accepts any type that is convertible to [`Style`] (e.g. [`Style`], [`Color`], or
-    /// your own type that implements [`Into<Style>`]).
     ///
     /// This is a fluent setter method which must be chained or used as it consumes self
     #[must_use = "method moves the value of self and returns the modified value"]
@@ -222,9 +217,6 @@ impl<'k, B: Backend> HelpBar<'k, B> {
 
     /// Sets the style of the key code text
     ///
-    /// `style` accepts any type that is convertible to [`Style`] (e.g. [`Style`], [`Color`], or
-    /// your own type that implements [`Into<Style>`]).
-    ///
     /// This is a fluent setter method which must be chained or used as it consumes self
     #[must_use = "method moves the value of self and returns the modified value"]
     pub fn key_style(mut self, style: Style) -> Self {
@@ -234,9 +226,6 @@ impl<'k, B: Backend> HelpBar<'k, B> {
 
     /// Sets the style of the description text
     ///
-    /// `style` accepts any type that is convertible to [`Style`] (e.g. [`Style`], [`Color`], or
-    /// your own type that implements [`Into<Style>`]).
-    ///
     /// This is a fluent setter method which must be chained or used as it consumes self
     #[must_use = "method moves the value of self and returns the modified value"]
     pub fn description_style(mut self, style: Style) -> Self {
@@ -245,9 +234,6 @@ impl<'k, B: Backend> HelpBar<'k, B> {
     }
 
     /// Sets the style of the separators used to distinguish key bindings
-    ///
-    /// `style` accepts any type that is convertible to [`Style`] (e.g. [`Style`], [`Color`], or
-    /// your own type that implements [`Into<Style>`]).
     ///
     /// This is a fluent setter method which must be chained or used as it consumes self
     #[must_use = "method moves the value of self and returns the modified value"]

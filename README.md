@@ -138,7 +138,7 @@ fn render_help_bar(frame: &mut Frame) {
 }
 ```
 
-The [`Help`] widget displays keybindings in a table format:
+The `Help` widget displays keybindings in a table format:
 
 ```text
 ┌────────────────────────────────────────────┐
@@ -147,7 +147,7 @@ The [`Help`] widget displays keybindings in a table format:
 └────────────────────────────────────────────┘
 ```
 
-The [`HelpBar`] widget displays keybindings in a single line:
+The `HelpBar` widget displays keybindings in a single line:
 
 ```text
 Increment the counter: <+> | Decrement the counter: <->

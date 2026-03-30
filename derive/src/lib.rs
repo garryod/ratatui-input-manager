@@ -111,6 +111,7 @@ struct KeyBindAttrs {
 
 /// Generate an implementation of [`ratatui_input_manager::KeyMap`], dispatching input events to
 /// the appropriate methods according to the attributes provided
+#[allow(rustdoc::broken_intra_doc_links)]
 #[proc_macro_attribute]
 pub fn keymap(
     attrs: proc_macro::TokenStream,
