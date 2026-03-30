@@ -88,6 +88,7 @@ fn main() -> io::Result<()> {
                 HelpBar::new(App::KEYBINDS),
                 help_bar_area,
             );
+            // Renders as: "Increment the counter: <+> | Decrement the counter: <-> | Exit: <Esc>, <q>, <Ctrl+c>"
         }).unwrap();
 
         /// use [`crossterm::event::poll`] in place of iterating through test
@@ -101,6 +102,55 @@ fn main() -> io::Result<()> {
         }
     }
 }
+```
+
+### Widgets
+
+This crate provides two widgets for displaying keybindings:
+
+```rust
+use crossterm::event::KeyCode;
+use ratatui_core::terminal::Frame;
+use ratatui_input_manager::{keymap, KeyMap};
+use ratatui_input_manager::widgets::{Help, HelpBar};
+
+struct App;
+
+#[keymap(backend = "crossterm")]
+impl App {
+    /// Increment the counter
+    #[keybind(pressed(key=KeyCode::Char('+')))]
+    fn increment(&mut self) {}
+
+    /// Decrement the counter
+    #[keybind(pressed(key=KeyCode::Char('-')))]
+    fn decrement(&mut self) {}
+}
+
+fn render_help(frame: &mut Frame) {
+    let help = Help::new(App::KEYBINDS);
+    frame.render_widget(help, frame.area());
+}
+
+fn render_help_bar(frame: &mut Frame) {
+    let help_bar = HelpBar::new(App::KEYBINDS);
+    frame.render_widget(help_bar, frame.area());
+}
+```
+
+The [`Help`] widget displays keybindings in a table format:
+
+```text
+┌────────────────────────────────────────────┐
+│  +  Increment the counter                  │
+│  -  Decrement the counter                  │
+└────────────────────────────────────────────┘
+```
+
+The [`HelpBar`] widget displays keybindings in a single line:
+
+```text
+Increment the counter: <+> | Decrement the counter: <->
 ```
 
 ## License
