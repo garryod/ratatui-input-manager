@@ -32,6 +32,7 @@ use ratatui_widgets::{
 ///
 /// #[keymap(backend = "crossterm")]
 /// impl App {
+///     /// Quit the application
 ///     #[keybind(pressed(key = KeyCode::Char('q')))]
 ///     fn quit(&mut self) {}
 /// }
@@ -137,7 +138,7 @@ where
                     text.alignment = Some(HorizontalAlignment::Right);
                     Row::new([
                         Cell::new(text).style(self.key_style),
-                        Cell::new(description.unwrap_or_default()).style(self.description_style),
+                        Cell::new(*description).style(self.description_style),
                     ])
                 },
             ),
@@ -173,6 +174,7 @@ where
 ///
 /// #[keymap(backend = "crossterm")]
 /// impl App {
+///     /// Quit the application
 ///     #[keybind(pressed(key = KeyCode::Char('q')))]
 ///     fn quit(&mut self) {}
 /// }
@@ -259,10 +261,7 @@ where
             )| {
                 [
                     Span::styled(if idx == 0 { "" } else { " | " }, self.separator_style),
-                    Span::styled(
-                        format!("{}: ", description.unwrap_or_default()),
-                        self.description_style,
-                    ),
+                    Span::styled(format!("{}: ", description), self.description_style),
                     Span::styled(
                         pressed
                             .iter()

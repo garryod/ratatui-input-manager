@@ -84,7 +84,7 @@ pub struct KeyBind<B: Backend + 'static> {
     /// The key press event handlded by this binding
     pub pressed: &'static [KeyPress<B>],
     /// A brief description of the expected behaviour
-    pub description: Option<&'static str>,
+    pub description: &'static str,
 }
 
 /// A key press event, combining a key code with modifiers

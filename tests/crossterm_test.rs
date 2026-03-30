@@ -1,6 +1,6 @@
 #![cfg(feature = "crossterm")]
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-use ratatui_input_manager::{KeyMap, keymap};
+use ratatui_input_manager::{keymap, KeyMap};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 struct TestKeyMap {
@@ -10,12 +10,14 @@ struct TestKeyMap {
 
 #[keymap(backend = "crossterm")]
 impl TestKeyMap {
+    /// Handle escape or q to exit
     #[keybind(pressed(key=KeyCode::Esc))]
     #[keybind(pressed(key=KeyCode::Char('q')))]
     fn handle_esc(&mut self) {
         self.exit = true;
     }
 
+    /// Handle Ctrl+Shift+A
     #[keybind(pressed(key=KeyCode::Char('a'), modifiers=KeyModifiers::CONTROL, modifiers=KeyModifiers::SHIFT))]
     fn handle_ctrl_shift_a(&mut self) {
         self.ctrl_shift_a = true;

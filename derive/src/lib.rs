@@ -141,20 +141,26 @@ fn keymap_impl(args: KeyMapAttrs, input: ItemImpl) -> syn::Result<(ItemImpl, Ite
             ImplItem::Fn(mut item_fn) => {
                 let KeyBindAttrs { pressed, attrs } =
                     KeyBindAttrs::from_attributes(&item_fn.attrs)?;
-                let doc = attrs.iter().find_map(|attr| {
-                    if let Meta::NameValue(MetaNameValue { path, value, .. }) = &attr.meta
-                        && path.is_ident("doc")
-                    {
-                        match value {
-                            Expr::Lit(ExprLit {
+                let doc = attrs
+                    .iter()
+                    .find_map(|attr| {
+                        if let Meta::NameValue(MetaNameValue { path, value, .. }) = &attr.meta
+                            && path.is_ident("doc")
+                            && let Expr::Lit(ExprLit {
                                 lit: Lit::Str(doc), ..
-                            }) => Some(doc.value().trim().to_string()),
-                            _ => None,
+                            }) = value
+                        {
+                            Some(doc.value().trim().to_string())
+                        } else {
+                            None
                         }
-                    } else {
-                        None
-                    }
-                });
+                    })
+                    .ok_or_else(|| {
+                        syn::Error::new(
+                            item_fn.sig.ident.span(),
+                            "Keybind functions must have a doc comment for the description",
+                        )
+                    })?;
                 item_fn.attrs = attrs;
                 Ok(((item_fn.sig.ident.clone(), pressed, doc), item_fn))
             }
@@ -180,10 +186,6 @@ fn keymap_impl(args: KeyMapAttrs, input: ItemImpl) -> syn::Result<(ItemImpl, Ite
     ) = keybinds
         .into_iter()
         .map(|(fn_name, pressed, description)| {
-            let description = match description {
-                Some(description) => quote! {Some(#description)},
-                None => quote! {None},
-            };
             let (match_arm, key_codes, combined_modifiers) = pressed
                 .into_iter()
                 .map(|Pressed { key, modifiers }| {
@@ -259,6 +261,7 @@ mod tests {
         };
         let input = parse_quote! {
             impl Foo {
+                /// The first keybind
                 #[keybind(pressed(key=KeyCode::Esc))]
                 #[keybind(pressed(key=KeyCode::Char('q')))]
                 fn bar(&mut self) {
@@ -275,6 +278,7 @@ mod tests {
         let (orig_impl, keymap_impl) = keymap_impl(args, input).unwrap();
         let expected_orig = parse2::<ItemImpl>(quote! {
             impl Foo {
+                /// The first keybind
                 fn bar(&mut self) {
                     todo!()
                 }
@@ -300,7 +304,7 @@ mod tests {
                                 modifiers: ::crossterm::event::KeyModifiers::NONE,
                             },
                         ],
-                        description: None,
+                        description: "The first keybind",
                     },
                     ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::CrosstermBackend> {
                         pressed: &[
@@ -311,7 +315,7 @@ mod tests {
                                     .union(KeyModifiers::SHIFT),
                             },
                         ],
-                        description: Some("The second keybind"),
+                        description: "The second keybind",
                     }
                 ];
 
@@ -366,6 +370,7 @@ mod tests {
         };
         let input = parse_quote! {
             impl Foo {
+                /// The first keybind
                 #[keybind(pressed(key=Key::Esc))]
                 #[keybind(pressed(key=Key::Char('q')))]
                 fn bar(&mut self) {
@@ -382,6 +387,7 @@ mod tests {
         let (orig_impl, keymap_impl) = keymap_impl(args, input).unwrap();
         let expected_orig = parse2::<ItemImpl>(quote! {
             impl Foo {
+                /// The first keybind
                 fn bar(&mut self) {
                     todo!()
                 }
@@ -407,7 +413,7 @@ mod tests {
                                 modifiers: (),
                             },
                         ],
-                        description: None,
+                        description: "The first keybind",
                     },
                     ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermionBackend> {
                         pressed: &[
@@ -416,7 +422,7 @@ mod tests {
                                 modifiers: (),
                             },
                         ],
-                        description: Some("The second keybind"),
+                        description: "The second keybind",
                     }
                 ];
 
@@ -451,6 +457,7 @@ mod tests {
         };
         let input = parse_quote! {
             impl Foo {
+                /// The first keybind
                 #[keybind(pressed(key=KeyCode::Escape))]
                 #[keybind(pressed(key=KeyCode::Char('q')))]
                 fn bar(&mut self) {
@@ -467,6 +474,7 @@ mod tests {
         let (orig_impl, keymap_impl) = keymap_impl(args, input).unwrap();
         let expected_orig = parse2::<ItemImpl>(quote! {
             impl Foo {
+                /// The first keybind
                 fn bar(&mut self) {
                     todo!()
                 }
@@ -492,7 +500,7 @@ mod tests {
                                 modifiers: ::termwiz::input::Modifiers::NONE,
                             },
                         ],
-                        description: None,
+                        description: "The first keybind",
                     },
                     ::ratatui_input_manager::KeyBind::<::ratatui_input_manager::TermwizBackend> {
                         pressed: &[
@@ -503,7 +511,7 @@ mod tests {
                                     .union(Modifiers::SHIFT),
                             },
                         ],
-                        description: Some("The second keybind"),
+                        description: "The second keybind",
                     }
                 ];
 
@@ -542,6 +550,28 @@ mod tests {
         assert_eq!(
             format_item::<ItemImpl>(expected_keymap),
             format_item(keymap_impl)
+        );
+    }
+
+    #[test]
+    fn test_missing_doc_comment_error() {
+        let args = KeyMapAttrs {
+            backend: Backend::Crossterm,
+        };
+        let input = parse_quote! {
+            impl Foo {
+                #[keybind(pressed(key=KeyCode::Esc))]
+                fn bar(&mut self) {
+                    todo!()
+                }
+            }
+        };
+        let result = keymap_impl(args, input);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "Keybind functions must have a doc comment for the description"
         );
     }
 }

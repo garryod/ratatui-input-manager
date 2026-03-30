@@ -1,5 +1,5 @@
 #![cfg(feature = "termion")]
-use ratatui_input_manager::{KeyMap, keymap};
+use ratatui_input_manager::{keymap, KeyMap};
 use termion::event::{Event, Key};
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -10,12 +10,14 @@ struct TestKeyMap {
 
 #[keymap(backend = "termion")]
 impl TestKeyMap {
+    /// Handle escape or q to exit
     #[keybind(pressed(key = Key::Esc))]
     #[keybind(pressed(key = Key::Char('q')))]
     fn handle_esc(&mut self) {
         self.exit = true;
     }
 
+    /// Handle a key
     #[keybind(pressed(key = Key::Char('a')))]
     fn handle_a(&mut self) {
         self.a = true;

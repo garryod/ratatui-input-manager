@@ -1,5 +1,5 @@
 #![cfg(feature = "termwiz")]
-use ratatui_input_manager::{KeyMap, keymap};
+use ratatui_input_manager::{keymap, KeyMap};
 use termwiz::input::{InputEvent, KeyCode, KeyEvent, Modifiers};
 
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -10,12 +10,14 @@ struct TestKeyMap {
 
 #[keymap(backend = "termwiz")]
 impl TestKeyMap {
+    /// Handle escape or q to exit
     #[keybind(pressed(key=KeyCode::Escape))]
     #[keybind(pressed(key=KeyCode::Char('q')))]
     fn handle_esc(&mut self) {
         self.exit = true;
     }
 
+    /// Handle Ctrl+Shift+A
     #[keybind(pressed(key=KeyCode::Char('a'), modifiers=Modifiers::CTRL, modifiers=Modifiers::SHIFT))]
     fn handle_ctrl_shift_a(&mut self) {
         self.ctrl_shift_a = true;
