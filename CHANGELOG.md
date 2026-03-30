@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/garryod/ratatui-input-manager/compare/ratatui-input-manager-v0.2.0...ratatui-input-manager-v0.2.1) - 2026-03-30
+
+### Added
+
+- improve help widget readability
+- add style setters to widgets
+
+### Other
+
+- fix badges
+- add docs build to CI
+- fix malformed docs
+- add help widget example to readme
+- clean up readme example
+- add widget rendering tests
+- setup dependabot
+- add badges to the readme
+- lint with clippy
+- add a crossterm example
+
 ## [0.2.0](https://github.com/garryod/ratatui-input-manager/compare/ratatui-input-manager-v0.1.0...ratatui-input-manager-v0.2.0) - 2026-03-28
 
 ### Added
