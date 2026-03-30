@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/garryod/ratatui-input-manager/compare/ratatui-input-manager-v0.2.1...ratatui-input-manager-v0.3.0) - 2026-03-30
+
+### Added
+
+- [**breaking**] require doc comments on keybinds
+
+### Other
+
+- release v0.2.1
+- fix badges
+
 ## [0.2.1](https://github.com/garryod/ratatui-input-manager/compare/ratatui-input-manager-v0.2.0...ratatui-input-manager-v0.2.1) - 2026-03-30
 
 ### Other

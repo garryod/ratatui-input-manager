@@ -7,4 +7,4 @@ publish = false
 [dependencies]
 crossterm = { workspace = true }
 ratatui = { workspace = true }
-ratatui-input-manager = { version = "0.2.1", path = "../../" }
+ratatui-input-manager = { version = "0.3.0", path = "../../" }
