@@ -46,6 +46,7 @@ use ratatui_widgets::{
 pub struct Help<'k, B: Backend + 'static> {
     keybinds: &'k [KeyBind<B>],
     block: Option<Block<'k>>,
+    style: Style,
     key_style: Style,
     description_style: Style,
 }
@@ -58,6 +59,7 @@ impl<'k, B: Backend> Help<'k, B> {
         Self {
             keybinds,
             block: None,
+            style: Style::default(),
             key_style: Style::default(),
             description_style: Style::default(),
         }
@@ -69,6 +71,15 @@ impl<'k, B: Backend> Help<'k, B> {
     #[must_use = "method moves the value of self and returns the modified value"]
     pub fn block(mut self, block: Block<'k>) -> Self {
         self.block = Some(block);
+        self
+    }
+
+    /// Sets the global style of the help table
+    ///
+    /// This is a fluent setter method which must be chained or used as it consumes self
+    #[must_use = "method moves the value of self and returns the modified value"]
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
         self
     }
 
@@ -126,7 +137,8 @@ where
                 },
             ),
             [Constraint::Min(8), Constraint::Fill(1)],
-        );
+        )
+        .style(self.style);
         let area = match self.block {
             Some(block) => {
                 block.clone().render(area, buf);
@@ -169,6 +181,7 @@ where
 /// ```
 pub struct HelpBar<'k, B: Backend + 'static> {
     keybinds: &'k [KeyBind<B>],
+    style: Style,
     key_style: Style,
     description_style: Style,
     separator_style: Style,
@@ -181,10 +194,20 @@ impl<'k, B: Backend> HelpBar<'k, B> {
     pub fn new(keybinds: &'k [KeyBind<B>]) -> Self {
         Self {
             keybinds,
+            style: Style::default(),
             key_style: Style::default(),
             description_style: Style::default(),
             separator_style: Style::default(),
         }
+    }
+
+    /// Sets the global style of the help bar
+    ///
+    /// This is a fluent setter method which must be chained or used as it consumes self
+    #[must_use = "method moves the value of self and returns the modified value"]
+    pub fn style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
     }
 
     /// Sets the style of the key code text
@@ -255,6 +278,7 @@ where
                 ]
             },
         ))
+        .style(self.style)
         .render(area, buf);
     }
 }
