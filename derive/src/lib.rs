@@ -319,7 +319,7 @@ mod tests {
                     }
                 ];
 
-                fn handle(&mut self, event: &<::ratatui_input_manager::CrosstermBackend as ::ratatui_input_manager::Backend>::Event) {
+                fn handle(&mut self, event: &<::ratatui_input_manager::CrosstermBackend as ::ratatui_input_manager::Backend>::Event) -> bool {
                     match event {
                         ::crossterm::event::Event::Key(
                             ::crossterm::event::KeyEvent {
@@ -328,7 +328,7 @@ mod tests {
                                 kind: ::crossterm::event::KeyEventKind::Press,
                                 ..
                             },
-                        ) if modifiers.contains(::crossterm::event::KeyModifiers::NONE) => self.bar(),
+                        ) if modifiers.contains(::crossterm::event::KeyModifiers::NONE) => { self.bar(); true }
                         ::crossterm::event::Event::Key(
                             ::crossterm::event::KeyEvent {
                                 code: KeyCode::Char('q'),
@@ -336,7 +336,7 @@ mod tests {
                                 kind: ::crossterm::event::KeyEventKind::Press,
                                 ..
                             },
-                        ) if modifiers.contains(::crossterm::event::KeyModifiers::NONE) => self.bar(),
+                        ) if modifiers.contains(::crossterm::event::KeyModifiers::NONE) => { self.bar(); true }
                         ::crossterm::event::Event::Key(
                             ::crossterm::event::KeyEvent {
                                 code: KeyCode::Char('a'),
@@ -349,8 +349,8 @@ mod tests {
                                 ::crossterm::event::KeyModifiers::NONE
                                     .union(KeyModifiers::CONTROL)
                                     .union(KeyModifiers::SHIFT),
-                            ) => self.baz(),
-                        _ => {}
+                            ) => { self.baz(); true }
+                        _ => false,
                     }
                 }
             }
@@ -426,18 +426,18 @@ mod tests {
                     }
                 ];
 
-                fn handle(&mut self, event: &<::ratatui_input_manager::TermionBackend as ::ratatui_input_manager::Backend>::Event) {
+                fn handle(&mut self, event: &<::ratatui_input_manager::TermionBackend as ::ratatui_input_manager::Backend>::Event) -> bool {
                     match event {
                         ::termion::event::Event::Key(
                             ::termion::event::Key::Esc
-                        ) => self.bar(),
+                        ) => { self.bar(); true }
                         ::termion::event::Event::Key(
                             ::termion::event::Key::Char('q')
-                        ) => self.bar(),
+                        ) => { self.bar(); true }
                         ::termion::event::Event::Key(
                             ::termion::event::Key::Char('a')
-                        ) => self.baz(),
-                        _ => {}
+                        ) => { self.baz(); true }
+                        _ => false,
                     }
                 }
             }
@@ -515,20 +515,20 @@ mod tests {
                     }
                 ];
 
-                fn handle(&mut self, event: &<::ratatui_input_manager::TermwizBackend as ::ratatui_input_manager::Backend>::Event) {
+                fn handle(&mut self, event: &<::ratatui_input_manager::TermwizBackend as ::ratatui_input_manager::Backend>::Event) -> bool {
                     match event {
                         ::termwiz::input::InputEvent::Key(
                             ::termwiz::input::KeyEvent {
                                 key: KeyCode::Escape,
                                 modifiers,
                             },
-                        ) if modifiers.contains(::termwiz::input::Modifiers::NONE) => self.bar(),
+                        ) if modifiers.contains(::termwiz::input::Modifiers::NONE) => { self.bar(); true }
                         ::termwiz::input::InputEvent::Key(
                             ::termwiz::input::KeyEvent {
                                 key: KeyCode::Char('q'),
                                 modifiers,
                             },
-                        ) if modifiers.contains(::termwiz::input::Modifiers::NONE) => self.bar(),
+                        ) if modifiers.contains(::termwiz::input::Modifiers::NONE) => { self.bar(); true }
                         ::termwiz::input::InputEvent::Key(
                             ::termwiz::input::KeyEvent {
                                 key: KeyCode::Char('a'),
@@ -539,8 +539,8 @@ mod tests {
                                 ::termwiz::input::Modifiers::NONE
                                     .union(Modifiers::CTRL)
                                     .union(Modifiers::SHIFT),
-                            ) => self.baz(),
-                        _ => {}
+                            ) => { self.baz(); true }
+                        _ => false,
                     }
                 }
             }
