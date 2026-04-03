@@ -222,10 +222,10 @@ fn keymap_impl(args: KeyMapAttrs, input: ItemImpl) -> syn::Result<(ItemImpl, Ite
                 )*
             ];
 
-            fn handle(&mut self, event: &<#backend_type as ::ratatui_input_manager::Backend>::Event) {
+            fn handle(&mut self, event: &<#backend_type as ::ratatui_input_manager::Backend>::Event) -> bool {
                 match event {
-                    #(#(#match_arms => self.#fn_names(),)*)*
-                    _ => {}
+                    #(#(#match_arms => {self.#fn_names(); true},)*)*
+                    _ => false
                 }
             }
         }

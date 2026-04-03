@@ -58,7 +58,7 @@ pub trait KeyMap<B: Backend + 'static> {
     const KEYBINDS: &'static [KeyBind<B>];
 
     /// Handle an event by calling the appropriate handler method
-    fn handle(&mut self, event: &B::Event);
+    fn handle(&mut self, event: &B::Event) -> bool;
 }
 
 /// A dyn compatible equivalent to [`KeyMap`]
@@ -66,7 +66,7 @@ pub trait KeyMap<B: Backend + 'static> {
 pub trait DynKeyMap<B: Backend + 'static> {
     fn keybinds(&self) -> &'static [KeyBind<B>];
 
-    fn handle(&mut self, event: &B::Event);
+    fn handle(&mut self, event: &B::Event) -> bool;
 }
 
 impl<B: Backend + 'static, T: KeyMap<B>> DynKeyMap<B> for T {
@@ -74,7 +74,7 @@ impl<B: Backend + 'static, T: KeyMap<B>> DynKeyMap<B> for T {
         T::KEYBINDS
     }
 
-    fn handle(&mut self, event: &B::Event) {
+    fn handle(&mut self, event: &B::Event) -> bool {
         self.handle(event)
     }
 }
