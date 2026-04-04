@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/garryod/ratatui-input-manager/compare/ratatui-input-manager-derive-v0.3.0...ratatui-input-manager-derive-v0.4.0) - 2026-04-04
+
+### Added
+
+- return a bool from handle to show if the key was consumed
+
+### Fixed
+
+- fixup! feat: return a bool from handle to show if the key was consumed
+
 ## [0.3.0](https://github.com/garryod/ratatui-input-manager/compare/ratatui-input-manager-derive-v0.2.1...ratatui-input-manager-derive-v0.3.0) - 2026-03-30
 
 ### Added
