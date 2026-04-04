@@ -29,7 +29,6 @@ struct TestKeyMap {
     y: bool,
 
     confirmation_overlay: Option<TestConfirmationOverlayKeyMap>,
-    submitted: bool,
 }
 
 impl TestKeyMap {
@@ -41,26 +40,13 @@ impl TestKeyMap {
     }
 
     fn handle(&mut self, event: &Event) -> bool {
-        if let Some(overlay) = &mut self.confirmation_overlay {
-            let consumed = overlay.handle(event);
-
-            if let Some(accepted) = overlay.accepted {
+        if let Some(overlay) = &mut self.confirmation_overlay
+            && overlay.handle(event) {
                 self.confirmation_overlay = None;
-                if accepted {
-                    self.submit();
-                }
-            }
-
-            if consumed {
                 return true;
             }
-        }
 
         KeyMap::handle(self, event)
-    }
-
-    fn submit(&mut self) {
-        self.submitted = true;
     }
 }
 
@@ -187,15 +173,12 @@ fn test_overlay_keybinds() {
     assert!(map.handle(&event));
     assert!(map.ctrl_shift_a);
 
-    // Overlay consumes conflicting key, submits, and is dismissed
+    // Overlay consumes conflicting key and is dismissed
     let event = Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE));
     assert!(map.handle(&event));
     assert!(!map.y);
-    assert!(map.submitted);
-    assert!(map.confirmation_overlay.is_none());
 
-    // With overlay dismissed, conflicting keys pass through to root
-    let event = Event::Key(KeyEvent::new(KeyCode::Char('y'), KeyModifiers::NONE));
+    // With overlay dismissed, conflicting key passes through to root
     assert!(map.handle(&event));
     assert!(map.y);
 }
