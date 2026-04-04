@@ -7,17 +7,25 @@ on:
 jobs:
   deny:
     uses: ./.github/workflows/_deny.yaml
+    permissions:
+      contents: read
 
   lint:
     uses: ./.github/workflows/_lint.yaml
+    permissions:
+      contents: read
 
   test:
     uses: ./.github/workflows/_test.yaml
     needs: lint
+    permissions:
+      contents: read
 
   docs:
     uses: ./.github/workflows/_docs.yaml
     needs: lint
+    permissions:
+      contents: read
 
   release_pr:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
