@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1](https://github.com/garryod/ratatui-input-manager/compare/ratatui-input-manager-v0.4.0...ratatui-input-manager-v0.4.1) - 2026-06-02
+
+### Other
+
+- *(deps)* bump rand from 0.8.5 to 0.8.6
+
 ## [0.4.0](https://github.com/garryod/ratatui-input-manager/compare/ratatui-input-manager-v0.3.0...ratatui-input-manager-v0.4.0) - 2026-04-04
 
 ### Added
