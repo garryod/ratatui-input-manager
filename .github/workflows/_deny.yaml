@@ -11,9 +11,9 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6.0.3
 
       - name: Run Cargo Deny
-        uses: EmbarkStudios/cargo-deny-action@v2.0.15
+        uses: EmbarkStudios/cargo-deny-action@v2.0.20
         with:
           command: check
