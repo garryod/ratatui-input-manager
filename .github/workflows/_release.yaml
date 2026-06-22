@@ -18,10 +18,10 @@ jobs:
           fetch-depth: 0
 
       - name: Install Rust Toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1.15.4
+        uses: actions-rust-lang/setup-rust-toolchain@v1.16.1
 
       - name: Create Release
-        uses: release-plz/action@v0.5.128
+        uses: release-plz/action@v0.5.130
         with:
           command: release
         env:
